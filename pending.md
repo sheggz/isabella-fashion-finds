@@ -1,64 +1,155 @@
-# Pending work and known gaps
+# Pending work and roadmap
 
 Last updated: 2026-10-01. Context: **close deadline, solo developer, also here to learn.** Update this file whenever something is finished or discovered.
 
-## Where we are
+## How we work through the milestones
+- Every milestone is a **vertical slice**: backend + frontend + tests + docs, finishing with something you can click through. Nothing "backend only" is left waiting for a UI.
+- Inside each milestone: tests first (TDD), pure logic separated from side effects, commit as each step finishes, then a write-up in `.notes/` and an ADR for any significant decision.
+- If time runs short, **cut from the bottom** (M7 reviews first). Every milestone leaves a working, demoable store.
 
-| Done | Notes |
+## Status
+
+| Milestone | State | Notes |
+|---|---|---|
+| M0 Scaffold | Done | Monorepo, rules, ADRs, CI workflow, error contract, middleware |
+| M1a Database + catalogue API | Done | Supabase Postgres, Alembic, RLS, product CRUD (backend only) |
+| M2 Google sign-in | Done | Sessions, roles. **Browser login confirmed working by the developer** |
+| Logging system | Done | Structured logs, request ids, no URL/query-string leaks |
+| **M1b Images + storefront + owner dashboard** | **Next** | |
+| D1 Deploy checkpoint | Planned | |
+| M3 Discounts | Planned | |
+| M4 Cart + order history | Planned | |
+| M5 Checkout + Flutterwave | Planned | |
+| M6 Mailgun emails | Planned | |
+| M7 Reviews and ratings | Planned | |
+| M8 Hardening + final deploy | Planned | |
+
+Tests today: 106 backend, 5 frontend. Lint clean.
+
+## Frontend conventions (apply from M1b onward)
+Plain JavaScript (ES modules) + Vite + Vitest, no framework yet. Layout under `frontend/src/`:
+- `api/`: the only code that calls the backend (`client.js`, one module per resource, e.g. `products.js`).
+- `lib/`: **pure** helpers, unit-tested (money formatting from kobo, cart totals, price display, form validation).
+- `state/`: small stores (current user, cart) with pure update functions; side effects at the edges.
+- `pages/`: one module per screen, rendering into the page; `components/`: reusable DOM builders.
+- `router.js`: tiny router (History API) mapping paths to pages.
+- Safety rules: build DOM with `textContent`/`createElement`, never `innerHTML` with data; every failure shown to the user comes from the normalised error shape; each screen handles loading, empty, error states.
+
+---
+
+## M1b: Images + storefront + owner dashboard
+**Goal (user-visible):** the owner signs in, adds a piece with photos, sizes, stock and an optional description; customers browse the catalogue and open a product page.
+
+**Backend**
+- [ ] Supabase Storage bucket `product-images` (public read, writes only through the server).
+- [ ] Storage adapter in `integrations/storage.py`: upload/delete, validate type and size, translate failures (boundary).
+- [ ] Owner endpoints: upload image to a product, delete image, reorder; `ProductOut` returns image URLs.
+- [ ] Map `IntegrityError` races to **409** (known gap) with a test.
+
+**Frontend**
+- [ ] App shell: header (store name, sign-in state, owner link), router, shared loading/empty/error components.
+- [ ] `state/` current-user store from `/auth/me`; route guard for owner pages.
+- [ ] `lib/money.js` (kobo to naira formatting, pure + tests).
+- [ ] Storefront: product list (cards with image and price), product detail (gallery, sizes with stock, description if present, "sold out" state).
+- [ ] Owner dashboard: product table, create/edit form (name, price, description, sizes and stock), image upload with preview, delete with confirmation.
+
+**Docs/tests:** ADR 0008 (image storage); backend adapter tests with a fake transport; frontend tests for `lib/` and state; write-up in `.notes/`.
+**Done when:** the owner can create a product with photos in the browser and a signed-out visitor sees it.
+
+## D1: Deploy checkpoint (small, early on purpose)
+Deploying late is the biggest risk for a close deadline, so deploy the M1b version first.
+- [ ] Choose hosts (frontend static host; backend host such as Render/Railway/Fly). *Decision needed.*
+- [ ] Production env vars; `APP_ENV=production`; `FRONTEND_URL`, `BACKEND_URL`, `CORS_ORIGINS`; add the production redirect URI in Google Cloud.
+- [ ] Run migrations on deploy; health check on `/health`; confirm Secure cookies and cross-origin cookies work in production (revisit SameSite/CSRF per ADR 0002 if hosts are on different domains).
+- [ ] Create the GitHub repo and push so **CI runs for the first time** and the code is backed up.
+**Done when:** a public URL shows the catalogue and the owner can sign in there.
+
+## M3: Scheduled discounts
+**Goal:** the owner schedules a discount; customers see it the moment it goes live.
+**Backend**
+- [ ] `discounts` table (starts_at, ends_at, percent or amount, scope: all or specific products) + migration with RLS.
+- [ ] **Pure** `effective_price(price, discounts, now)` (ADR 0005); product responses include `price_kobo`, `discounted_price_kobo`, `discount_ends_at`.
+- [ ] Owner endpoints: create/list/edit/cancel discounts; validation (end after start, sane percent).
+- [ ] A single pricing service function that cart and checkout will reuse (so later milestones never re-implement pricing).
+**Frontend**
+- [ ] Owner: discounts screen (create/schedule form, list with status: scheduled/live/ended).
+- [ ] Storefront: sale badge, struck-through original price, "ends on" note; display logic in `lib/` (pure, tested).
+**Done when:** a discount scheduled a minute ahead appears on the storefront without a reload-time hack or any cron job.
+
+## M4: Cart + order history
+**Goal:** signed-in customers keep a cart and can see their orders.
+**Backend**
+- [ ] Tables: `carts`/`cart_items` (server-side, per user, per variant) and `orders`/`order_items` (**price snapshot** at purchase) + migrations with RLS; ADR for the cart/order model.
+- [ ] Endpoints: get/add/update/remove cart items (stock-checked, prices from the pricing service), list my orders, order detail.
+- [ ] Domain errors: `OutOfStock`, `ProductUnavailable`.
+**Frontend**
+- [ ] Add-to-cart on the product page (size picker), cart page (quantities, totals via pure `lib/cart.js`), header cart count, "sign in to continue" flow.
+- [ ] Order history and order detail pages.
+**Done when:** a customer fills a cart, refreshes, and sees the same cart; history page exists (empty until M5).
+
+## M5: Checkout + Flutterwave
+**Goal:** a customer pays and the order becomes paid exactly once.
+**Backend**
+- [ ] Delivery address capture (NGN only, no shipping calculation).
+- [ ] Create `pending` order from the cart; start Flutterwave payment with a unique `tx_ref`; return the payment link.
+- [ ] Webhook: **verify signature header**, **verify the transaction server-side with Flutterwave**, mark paid **idempotently**, decrement stock in **one database transaction**, clear the cart. Never trust the redirect alone.
+- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0009 (payment flow).
+**Frontend**
+- [ ] Checkout page (address form, order summary, pay button) that redirects to Flutterwave.
+- [ ] Return page that reads the order status from the backend (poll briefly while the webhook lands), with success, failed and "still processing" states.
+**Done when:** a test-mode payment marks the order paid, reduces stock and shows in order history; replaying the webhook changes nothing.
+
+## M6: Mailgun payment emails
+**Goal:** customers get a confirmation email after paying.
+- [ ] Mailgun adapter in `integrations/mailgun.py`; template as a **pure** function (order data in, subject/body out; tested).
+- [ ] Sent as a background task after payment confirmation; **a failed email never fails a paid order** (log a warning, record "email not sent" for retry).
+- [ ] Optional: owner notification email.
+- [ ] Frontend: confirmation screen mentions the email; nothing else needed.
+**Caveat:** the Mailgun sandbox only emails pre-authorised recipients; a verified domain is needed for real customers.
+**Done when:** a test payment sends an email to an authorised address, and a simulated Mailgun outage leaves the order paid.
+
+## M7: Reviews and ratings
+**Goal:** customers who bought a piece can rate and review it.
+**Backend**
+- [ ] `reviews` table (rating 1-5, text optional, one per user per product) + migration with RLS.
+- [ ] Rule: only users with a **paid** order containing the product may review (pure eligibility function + tests); average rating and count on `ProductOut`.
+**Frontend**
+- [ ] Product page: reviews list, average stars, review form shown only when eligible; star display helpers in `lib/` (pure).
+**Done when:** an eligible buyer can post a review and everyone sees it; an ineligible user gets a clear message.
+
+## M8: Hardening + final deploy
+- [ ] Rate limiting on `/auth/*` and write endpoints.
+- [ ] Postgres integration test suite (constraints, RLS, concurrent stock decrement), since current tests run on SQLite.
+- [ ] Frontend end-to-end smoke test; accessibility pass (labels, focus, keyboard); mobile layout check.
+- [ ] Seed script with demo products; README with full setup (Google console, Supabase connection string, env vars).
+- [ ] Final production checks: secrets rotated, Flutterwave live keys (if the business account is verified), Mailgun domain verified, error alerting on ERROR-level logs.
+
+---
+
+## Cross-cutting items and where they get fixed
+| Item | Fixed in |
 |---|---|
-| M0 Scaffold | Monorepo, rules (AGENTS.md), ADRs, CI workflow, error contract, middleware |
-| M1a Database + catalogue API | Supabase Postgres via SQLAlchemy + Alembic, RLS on, product CRUD |
-| M2 Google sign-in | Sessions, roles. **Browser login confirmed working by the developer** |
-| Logging system | Structured logs, request ids, no query-string/URL leaks |
-
-Tests: 106 backend, 5 frontend. Lint clean.
-
-## What the brief still needs (priority order for the deadline)
-
-### Must have (the store is not usable without these)
-- [ ] **Product images** (M1b): Supabase Storage bucket `product-images`, owner-only upload, type/size validation, write `product_images` rows, return image URLs in `ProductOut`.
-- [ ] **Storefront pages (frontend):** product list, product detail (with the optional description), sign-in state in a header. *The frontend currently has only a sign-in banner.*
-- [ ] **Owner dashboard (frontend):** create/edit/delete product, set sizes and stock, upload photos, write description.
-- [ ] **Cart** (server-side, per user) + **order history**: tables, endpoints, UI.
-- [ ] **Checkout + Flutterwave** (M5): create pending order, start payment with a unique `tx_ref`, webhook with signature check, **server-side transaction verification**, idempotent "mark paid", stock decrement in one transaction. Needs a payment-flow ADR (0008).
-- [ ] **Mailgun payment email** (M6): send after payment confirmation as a background task; failure must never fail a paid order.
-- [ ] **Deployment:** pick hosts (frontend static, backend), set production env vars, `APP_ENV=production`, add the production redirect URI in Google Cloud, `FRONTEND_URL`/`BACKEND_URL`/`CORS_ORIGINS`, run migrations on deploy, health-check path `/health`.
-
-### Should have
-- [ ] **Scheduled discounts** (M3): `discounts` table (starts_at/ends_at, percent or amount, scope all/product), owner endpoints, **pure** price function (ADR 0005), discounted price shown in the catalogue "when it goes live", price snapshot on the order.
-- [ ] **Reviews and ratings** (M7): only users with a paid order containing the product; one review per user per product; average rating on the product.
-- [ ] **Delivery address** captured at checkout (NGN only, no shipping calculation, per earlier decision).
-
-### Could have
-- [ ] Owner promotion endpoint (promote another user to owner; `OWNER_EMAILS` only bootstraps).
-- [ ] Pagination metadata (total count), product search/filter/category.
-- [ ] Order status workflow for the owner (paid, packed, shipped), owner sales view.
-
-## Known gaps in what is already built
-- [ ] **`IntegrityError` races return a generic 500**, not 409 (two simultaneous inserts of the same size/user). Add a handler and a test.
-- [ ] **No rate limiting** on `/auth/*` or write endpoints.
-- [ ] **CSRF:** relies on `SameSite=Lax` + CORS allowlist (ADR 0002). Revisit if the frontend and API end up on different registrable domains in production (cookies would need `SameSite=None`, plus explicit CSRF tokens).
-- [ ] **Tests run on SQLite**; only manual checks touched real Postgres. Add a small Postgres integration suite (e.g. a separate schema or Supabase branch) for constraints, RLS and concurrency.
-- [ ] **CI has never run** (no git remote yet). Create the GitHub repo, push, confirm the workflow passes.
-- [ ] **Frontend is barely tested:** only the API-error helper. UI glue has no tests; no end-to-end test.
-- [ ] **No session revocation** (logout only clears the cookie; a copied cookie stays valid until its 7-day expiry).
-- [ ] **No seed script** for demo products.
-- [ ] `get_engine` is never disposed on shutdown (fine now; use a FastAPI `lifespan` if needed).
-- [ ] Mailgun **sandbox only emails pre-authorised recipients**; a verified domain is needed before real customers get emails.
-- [ ] Flutterwave is test-mode only until the business account is verified for live keys.
-- [ ] Logging: business events (order paid, email sent) not logged yet; no log shipping/alerting; `redact()` only masks by key name.
-- [ ] README does not yet describe auth/env setup in detail (Google console steps, Supabase connection string).
-- [ ] ADRs still to write: payment flow (0008), image storage, cart/order data model.
+| `IntegrityError` races return 500 instead of 409 | M1b |
+| CI has never run (no git remote) | D1 |
+| CSRF relies on SameSite=Lax + CORS (ADR 0002); revisit if hosts differ | D1 / M8 |
+| No rate limiting | M8 |
+| Tests run on SQLite only | M8 |
+| No session revocation (copied cookie valid until 7-day expiry) | later, if time allows |
+| `get_engine` never disposed on shutdown | later (FastAPI `lifespan`) |
+| Business events not logged yet (order paid, email sent); no log shipping/alerting | M5, M6, M8 |
+| Owner promotion endpoint (`OWNER_EMAILS` only bootstraps) | after M7, if time allows |
+| Pagination metadata, search/filter, order status workflow for the owner | optional extras |
+| Flutterwave live keys need a verified business account | M8 |
 
 ## Decisions still open
-- Hosting providers for frontend and backend.
-- Product model details: categories? multiple images per product (yes, table exists), size set per product vs fixed list.
-- Whether guests can browse the cart before signing in (current assumption: must be signed in to cart).
-- What the internship brief expects as deliverables (live URL, repo, demo, write-up): not yet known.
+- Hosting providers for frontend and backend (needed at D1).
+- Product details: categories? fixed size list vs free-form sizes.
+- Whether guests can browse before signing in (current assumption: must sign in to use the cart).
+- What the internship brief expects as deliverables (live URL, repo, demo, write-up).
 
 ## Learning checklist (the "also here to learn" part)
-Covered so far: layering, error handling at boundaries, middleware vs dependencies, ADRs, migrations, OAuth flow, cookies/sessions, logging and context variables, ES modules/Vite basics, TDD and pure functions.
-Coming up: file uploads and object storage, transactions and concurrency (stock/payments), webhooks and idempotency, background tasks, frontend routing and state in plain JS, deployment and environment config.
+Covered: layering, error handling at boundaries, middleware vs dependencies, ADRs, migrations, OAuth flow, cookies/sessions, logging and context variables, ES modules/Vite, TDD and pure functions.
+Per upcoming milestone: M1b file uploads, object storage and DOM/routing basics in plain JS; M3 time-based logic and pure pricing; M4 relational design for carts/orders and client state; M5 transactions, webhooks and idempotency; M6 background tasks and failure isolation; M7 authorization rules based on data; M8 testing against real Postgres and production hardening.
 
 ## Working notes
 Detailed write-ups per milestone live in `.notes/` (private, git-ignored).

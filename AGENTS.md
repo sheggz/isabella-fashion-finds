@@ -22,6 +22,14 @@ Online store for a fashion brand. The owner manages a catalogue; customers sign 
 
 6. **Explain the non-obvious in docstrings.** When code depends on a subtlety a reader wouldn't spot (implicit behaviour, framework or language quirks, import-time vs call-time effects, ordering that matters, a deliberate trade-off, a security reason), say what is going on and why in the function's docstring. Examples: why a function is cached, why a call only works inside an `except` block, why a cookie is `SameSite=Lax`. Don't narrate obvious lines. Explain the *why*, in plain language, for a reader new to the code and to Python/JavaScript. In JavaScript use a JSDoc block above the function.
 
+## Frontend rules
+- Layout under `frontend/src/`: `api/` (the only code that calls the backend), `lib/` (pure, unit-tested helpers), `state/` (small stores with pure update functions), `pages/`, `components/`, `router.js`.
+- Pure logic (money formatting, cart totals, price display, validation) lives in `lib/` and is tested first with Vitest. DOM and fetch code stays thin.
+- Build DOM with `createElement`/`textContent`. Never put server or user data into `innerHTML`.
+- Show only normalised errors from `api/apiError.js`; every screen handles loading, empty and error states.
+- Prices are for display only; the server computes every real price.
+- Document JavaScript subtleties (closures, `this`, async ordering, module behaviour) in a JSDoc block above the function.
+
 ## Logging rules
 - Every module logs through `logger = logging.getLogger(__name__)`. Never `print`, never configure handlers outside `app/core/log.py`.
 - The request id is attached to every line automatically (ContextVar); do not pass it by hand. Exception: code that runs outside the middleware (the unhandled-error handler) passes `extra={"request_id": ...}`.

@@ -27,4 +27,6 @@ npm test
 - `supabase/migrations/`: database schema (added in M1)
 
 ## Roadmap
-M0 scaffold (done) · M1 catalogue · M2 Google auth · M3 discounts · M4 cart and orders · M5 Flutterwave checkout · M6 Mailgun emails · M7 reviews
+Each milestone is a vertical slice (backend + frontend + tests). See [pending.md](pending.md) for the full plan and status.
+
+M0 scaffold ✅ · M1a catalogue API ✅ · M2 Google sign-in ✅ · **M1b images, storefront and owner dashboard** · D1 deploy checkpoint · M3 discounts · M4 cart and orders · M5 Flutterwave checkout · M6 Mailgun emails · M7 reviews · M8 hardening and final deploy
