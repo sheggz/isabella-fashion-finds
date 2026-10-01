@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.domain.cart import MAX_PER_LINE
 from app.domain.images import ALLOWED_TYPES, MAX_IMAGE_BYTES, MAX_IMAGES_PER_PRODUCT
 from app.domain.sizing import sizing_options
 
@@ -8,7 +9,7 @@ router = APIRouter(prefix="/catalogue", tags=["catalogue"])
 
 @router.get("/options")
 def options():
-    """The fixed sizes, body parts and photo rules, so the frontend never keeps its own copy.
+    """The fixed sizes, body parts, photo rules and cart ceiling, so the frontend never keeps its own copy.
 
     The browser uses the photo rules only to give instant feedback; the server re-checks
     every upload, so these numbers are advice to the UI and not a security control.
@@ -20,4 +21,5 @@ def options():
             "max_per_product": MAX_IMAGES_PER_PRODUCT,
             "types": list(ALLOWED_TYPES),
         },
+        "cart": {"max_per_line": MAX_PER_LINE},
     }

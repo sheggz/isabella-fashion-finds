@@ -57,3 +57,7 @@ def test_options_also_publish_the_photo_rules(app, client):
     assert images["max_bytes"] == 5 * 1024 * 1024
     assert images["max_per_product"] == 8
     assert images["types"] == ["image/jpeg", "image/png", "image/webp"]
+
+
+def test_options_also_publish_the_cart_ceiling(app, client):
+    assert client.get("/catalogue/options").json()["cart"] == {"max_per_line": 10}
