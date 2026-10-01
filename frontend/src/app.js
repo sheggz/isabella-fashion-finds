@@ -1,5 +1,7 @@
 // Wires the pieces together: session -> header, router -> pages.
 import { renderHeader } from './components/header.js';
+import { renderAdminEdit } from './pages/admin/edit.js';
+import { renderAdminList } from './pages/admin/list.js';
 import { renderHome } from './pages/home.js';
 import { renderProduct } from './pages/product.js';
 import { createRouter } from './router.js';
@@ -10,6 +12,10 @@ import { loadSession, session, signOut } from './state/session.js';
 export const routes = [
   { name: 'home', pattern: '/', render: renderHome },
   { name: 'product', pattern: '/products/:id', render: renderProduct },
+  { name: 'admin', pattern: '/admin', requires: 'owner', render: renderAdminList },
+  // 'new' must come BEFORE ':id', otherwise the router would read "new" as a product id.
+  { name: 'adminNew', pattern: '/admin/products/new', requires: 'owner', render: renderAdminEdit },
+  { name: 'adminEdit', pattern: '/admin/products/:id', requires: 'owner', render: renderAdminEdit },
 ];
 
 export const startApp = async ({ header, main }) => {

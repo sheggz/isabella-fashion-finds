@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatNaira, nairaToKobo } from '../src/lib/money.js';
+import { formatNaira, koboToInput, nairaToKobo } from '../src/lib/money.js';
 
 describe('formatNaira', () => {
   it('shows whole naira without decimals and groups thousands', () => {
@@ -23,6 +23,26 @@ describe('formatNaira', () => {
     expect(formatNaira(null)).toBe('—');
     expect(formatNaira(undefined)).toBe('—');
     expect(formatNaira('1500')).toBe('—');
+  });
+});
+
+describe('koboToInput', () => {
+  it('gives the plain text an owner would type back into a price box', () => {
+    expect(koboToInput(1500000)).toBe('15000');
+    expect(koboToInput(1500050)).toBe('15000.50');
+    expect(koboToInput(5)).toBe('0.05');
+    expect(koboToInput(0)).toBe('0');
+  });
+
+  it('round-trips with nairaToKobo', () => {
+    for (const kobo of [0, 1, 99, 100, 1999, 1500050, 123456789]) {
+      expect(nairaToKobo(koboToInput(kobo))).toBe(kobo);
+    }
+  });
+
+  it('returns an empty string for bad data', () => {
+    expect(koboToInput(null)).toBe('');
+    expect(koboToInput(-1)).toBe('');
   });
 });
 

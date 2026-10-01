@@ -4,6 +4,7 @@ import {
   isSoldOut,
   sortedImages,
   sortVariants,
+  stockSummary,
   sizeLabel,
   formatMeasurements,
 } from '../src/lib/products.js';
@@ -65,6 +66,19 @@ describe('sortVariants', () => {
 
   it('puts unknown sizes last', () => {
     expect(sortVariants([{ size: 'HUGE' }, { size: 'S' }], options).map((v) => v.size)).toEqual(['S', 'HUGE']);
+  });
+});
+
+describe('stockSummary', () => {
+  const options = { sizes: [{ value: 'S', label: 'S' }, { value: 'M', label: 'M' }, { value: 'ONE_SIZE', label: 'One size' }] };
+
+  it('lists each size with its stock, in store order, using friendly labels', () => {
+    const p = product({ variants: [{ size: 'ONE_SIZE', stock: 5 }, { size: 'S', stock: 0 }, { size: 'M', stock: 2 }] });
+    expect(stockSummary(p, options)).toBe('S 0 · M 2 · One size 5');
+  });
+
+  it('says so when no sizes have been added', () => {
+    expect(stockSummary(product({ variants: [] }), options)).toBe('No sizes');
   });
 });
 

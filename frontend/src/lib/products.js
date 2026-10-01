@@ -31,6 +31,13 @@ export const sortVariants = (variants, options) => {
   return [...variants].sort((a, b) => rank(a) - rank(b));
 };
 
+/** One-line stock overview for the owner's table: "S 0 · M 2 · One size 5". */
+export const stockSummary = (product, options) => {
+  const variants = sortVariants(product.variants ?? [], options);
+  if (variants.length === 0) return 'No sizes';
+  return variants.map((v) => `${sizeLabel(options, v.size)} ${v.stock}`).join(' · ');
+};
+
 /** The human label for a size code, using the options the backend published. */
 export const sizeLabel = (options, value) =>
   options?.sizes?.find((s) => s.value === value)?.label ?? value;

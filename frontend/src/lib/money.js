@@ -18,6 +18,20 @@ export const formatNaira = (kobo) => {
 };
 
 /**
+ * Plain text for a price input box: 1500050 -> "15000.50" (no currency sign, no thousands
+ * commas, decimals only when needed). The inverse of `nairaToKobo`. Bad data gives "".
+ *
+ * @param {number} kobo
+ * @returns {string}
+ */
+export const koboToInput = (kobo) => {
+  if (!Number.isInteger(kobo) || kobo < 0) return '';
+  const naira = Math.floor(kobo / 100);
+  const rest = kobo % 100;
+  return rest === 0 ? String(naira) : `${naira}.${String(rest).padStart(2, '0')}`;
+};
+
+/**
  * Convert what an owner types ("1,500.50") into integer kobo, or null if it is not a plain
  * amount with at most two decimals.
  *
