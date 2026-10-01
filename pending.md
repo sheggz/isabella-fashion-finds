@@ -1,6 +1,6 @@
 # Pending work and roadmap
 
-Last updated: 2026-10-01. Context: **close deadline, solo developer, also here to learn.** Update this file whenever something is finished or discovered.
+Last updated: 2026-10-01 (after M1b). Context: **close deadline, solo developer, also here to learn.** Update this file whenever something is finished or discovered.
 
 ## How we work through the milestones
 - Every milestone is a **vertical slice**: backend + frontend + tests + docs, finishing with something you can click through. Nothing "backend only" is left waiting for a UI.
@@ -15,8 +15,8 @@ Last updated: 2026-10-01. Context: **close deadline, solo developer, also here t
 | M1a Database + catalogue API | Done | Supabase Postgres, Alembic, RLS, product CRUD (backend only) |
 | M2 Google sign-in | Done | Sessions, roles. **Browser login confirmed working by the developer** |
 | Logging system | Done | Structured logs, request ids, no URL/query-string leaks |
-| **M1b Images + storefront + owner dashboard** | **Next** | |
-| D1 Deploy checkpoint | Planned | |
+| M1b Images + storefront + owner dashboard | **Built and tested; needs your browser click-through** | Backend verified live as owner; UI verified in jsdom only |
+| **D1 Deploy checkpoint** | **Next** | Needs the hosting decision |
 | M3 Discounts | Planned | |
 | M4 Cart + order history | Planned | |
 | M5 Checkout + Flutterwave | Planned | |
@@ -24,7 +24,7 @@ Last updated: 2026-10-01. Context: **close deadline, solo developer, also here t
 | M7 Reviews and ratings | Planned | |
 | M8 Hardening + final deploy | Planned | |
 
-Tests today: 106 backend, 5 frontend. Lint clean.
+Tests today: 213 backend, 140 frontend. Backend lint clean; no frontend linter yet.
 
 ## Frontend conventions (apply from M1b onward)
 Plain JavaScript (ES modules) + Vite + Vitest, no framework yet. Layout under `frontend/src/`:
@@ -37,30 +37,33 @@ Plain JavaScript (ES modules) + Vite + Vitest, no framework yet. Layout under `f
 
 ---
 
-## M1b: Images + storefront + owner dashboard
-**Goal (user-visible):** the owner signs in, adds a piece with photos, sizes, stock and an optional description; customers browse the catalogue and open a product page.
+## M1b: Images + storefront + owner dashboard (DONE, pending your browser check)
+**Delivered:** the owner can sign in, add a piece with description, price, the fixed sizes (each with stock and optional body-part measurements) and up to 8 photos; customers browse a product grid and open a product page with gallery, size picker, measurements and sold-out/low-stock states.
 
-**Backend**
-- [ ] Supabase Storage bucket `product-images` (public read, writes only through the server).
-- [ ] Storage adapter in `integrations/storage.py`: upload/delete, validate type and size, translate failures (boundary).
-- [ ] Owner endpoints: upload image to a product, delete image, reorder; `ProductOut` returns image URLs.
-- [ ] Map `IntegrityError` races to **409** (known gap) with a test.
+- [x] Supabase Storage bucket + adapter, photo upload/delete/reorder, server-side validation (real file type, 5 MB, 8 photos) (ADR 0009)
+- [x] Fixed sizes + per-size measurements, single source of truth via `/catalogue/options` (ADR 0008)
+- [x] `IntegrityError` unique races map to 409
+- [x] Frontend foundation: router with role guards, session store, header, loading/empty/error states
+- [x] Storefront (list, detail) and owner dashboard (list, create/edit, photo manager)
+- [x] Verified live as owner against real Postgres + Storage (role checks, full workflow, CORS preflights, cleanup)
 
-**Frontend**
-- [ ] App shell: header (store name, sign-in state, owner link), router, shared loading/empty/error components.
-- [ ] `state/` current-user store from `/auth/me`; route guard for owner pages.
-- [ ] `lib/money.js` (kobo to naira formatting, pure + tests).
-- [ ] Storefront: product list (cards with image and price), product detail (gallery, sizes with stock, description if present, "sold out" state).
-- [ ] Owner dashboard: product table, create/edit form (name, price, description, sizes and stock), image upload with preview, delete with confirmation.
-
-**Docs/tests:** ADR 0008 (image storage); backend adapter tests with a fake transport; frontend tests for `lib/` and state; write-up in `.notes/`.
-**Done when:** the owner can create a product with photos in the browser and a signed-out visitor sees it.
+**Follow-ups found during M1b**
+- [ ] **Click through it in a real browser** (owner and customer). The UI has only been verified in jsdom against mocked and real API data, never rendered in a browser.
+- [ ] Editing saves details and sizes in two requests; if the second fails the first is already saved (message is shown). Consider one combined endpoint later.
+- [ ] "Make cover" is the only reordering (no drag and drop).
+- [ ] Orphaned Storage files after a failed cleanup have no sweeper; deleted photos can stay visible at their old URL for a while (CDN cache).
+- [ ] The multipart upload is received in full before the 5 MB check; add a request-size limit at the host/proxy (D1).
+- [ ] Admin list has no pagination UI (API supports limit/offset, default 100).
+- [ ] No frontend linter/formatter yet (ESLint/Prettier) and no accessibility audit.
 
 ## D1: Deploy checkpoint (small, early on purpose)
 Deploying late is the biggest risk for a close deadline, so deploy the M1b version first.
 - [ ] Choose hosts (frontend static host; backend host such as Render/Railway/Fly). *Decision needed.*
 - [ ] Production env vars; `APP_ENV=production`; `FRONTEND_URL`, `BACKEND_URL`, `CORS_ORIGINS`; add the production redirect URI in Google Cloud.
 - [ ] Run migrations on deploy; health check on `/health`; confirm Secure cookies and cross-origin cookies work in production (revisit SameSite/CSRF per ADR 0002 if hosts are on different domains).
+- [ ] **Single-page-app fallback:** the History API router needs the host to serve `index.html` for unknown paths (e.g. Netlify `/*  /index.html  200`, Vercel `rewrites`), otherwise refreshing `/products/123` gives a 404.
+- [ ] **Run the backend in the same region as the database** (Supabase project is in eu-west-1). From a dev machine each database round trip is slow and a request makes several, so calls take seconds; measure after deploying, and reconsider `pool_pre_ping` (one extra round trip per request) if still slow.
+- [ ] Request-size limit at the proxy; run `python -m scripts.ensure_bucket` against the production Supabase project.
 - [ ] Create the GitHub repo and push so **CI runs for the first time** and the code is backed up.
 **Done when:** a public URL shows the catalogue and the owner can sign in there.
 
@@ -93,7 +96,7 @@ Deploying late is the biggest risk for a close deadline, so deploy the M1b versi
 - [ ] Delivery address capture (NGN only, no shipping calculation).
 - [ ] Create `pending` order from the cart; start Flutterwave payment with a unique `tx_ref`; return the payment link.
 - [ ] Webhook: **verify signature header**, **verify the transaction server-side with Flutterwave**, mark paid **idempotently**, decrement stock in **one database transaction**, clear the cart. Never trust the redirect alone.
-- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0009 (payment flow).
+- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0010 (payment flow).
 **Frontend**
 - [ ] Checkout page (address form, order summary, pay button) that redirects to Flutterwave.
 - [ ] Return page that reads the order status from the backend (poll briefly while the webhook lands), with success, failed and "still processing" states.
@@ -129,7 +132,6 @@ Deploying late is the biggest risk for a close deadline, so deploy the M1b versi
 ## Cross-cutting items and where they get fixed
 | Item | Fixed in |
 |---|---|
-| `IntegrityError` races return 500 instead of 409 | M1b |
 | CI has never run (no git remote) | D1 |
 | CSRF relies on SameSite=Lax + CORS (ADR 0002); revisit if hosts differ | D1 / M8 |
 | No rate limiting | M8 |
