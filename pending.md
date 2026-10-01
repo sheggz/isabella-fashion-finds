@@ -1,6 +1,6 @@
 # Pending work and roadmap
 
-Last updated: 2026-10-01 (after M3). Context: **close deadline, solo developer, also here to learn.** Update this file whenever something is finished or discovered.
+Last updated: 2026-10-01 (after M4). Context: **close deadline, solo developer, also here to learn.** Update this file whenever something is finished or discovered.
 
 ## How we work through the milestones
 - Every milestone is a **vertical slice**: backend + frontend + tests + docs, finishing with something you can click through. Nothing "backend only" is left waiting for a UI.
@@ -18,13 +18,13 @@ Last updated: 2026-10-01 (after M3). Context: **close deadline, solo developer, 
 | M1b Images + storefront + owner dashboard | **Built and tested; needs your browser click-through** | Backend verified live as owner; UI verified in jsdom only |
 | M3 Discounts + per-size pricing | **Built and tested; needs your browser click-through** | Backend verified live (real DB), pages in jsdom against the real API |
 | D1 Deploy checkpoint | **Postponed by decision** | Hosting to be chosen later |
-| **M4 Cart + order history** | **Next** | |
-| M5 Checkout + Flutterwave | Planned | |
+| M4 Cart + order history | **Built and tested; needs your browser click-through** | Backend verified live; shopper pages verified in jsdom against the real API |
+| **M5 Checkout + Flutterwave** | **Next** | Needs Flutterwave test keys (and Mailgun for M6) |
 | M6 Mailgun emails | Planned | |
 | M7 Reviews and ratings | Planned | |
 | M8 Hardening + final deploy | Planned | |
 
-Tests today: 346 backend, 225 frontend. Backend lint clean; no frontend linter yet.
+Tests today: 417 backend, 299 frontend. Backend lint clean; no frontend linter yet.
 
 ## Frontend conventions (apply from M1b onward)
 Plain JavaScript (ES modules) + Vite + Vitest, no framework yet. Layout under `frontend/src/`:
@@ -87,24 +87,32 @@ Deploying late is the biggest risk for a close deadline, so deploy the M1b versi
 - [ ] The Discounts list has no pagination or search yet.
 - [ ] No sorting or filtering by price on the storefront.
 
-## M4: Cart + order history
-**Goal:** signed-in customers keep a cart and can see their orders.
-**Backend**
-- [ ] Tables: `carts`/`cart_items` (server-side, per user, per variant) and `orders`/`order_items` (**price snapshot** at purchase) + migrations with RLS; ADR for the cart/order model.
-- [ ] Endpoints: get/add/update/remove cart items (stock-checked, prices from the pricing service), list my orders, order detail.
-- [ ] Domain errors: `OutOfStock`, `ProductUnavailable`.
-**Frontend**
-- [ ] Add-to-cart on the product page (size picker), cart page (quantities, totals via pure `lib/cart.js`), header cart count, "sign in to continue" flow.
-- [ ] Order history and order detail pages.
-**Done when:** a customer fills a cart, refreshes, and sees the same cart; history page exists (empty until M5).
+## M4: Cart + order history (DONE, pending your browser check)
+**Delivered:** signed-in shoppers add a size to a cart that lives on the server, see it with live prices and notices, change quantities, and see their order history. The owner can set a **limit per order** on each piece.
+
+- [x] `cart_items` + pure cart rules; GET/POST/PATCH/DELETE `/cart` (ADR 0011)
+- [x] Owner's optional limit per order per piece (counted across sizes; 1 suits one-of-a-kind finds)
+- [x] Live re-pricing through the shared pricing rules, price-change notices, problem lines excluded from the subtotal (hidden piece, stock dropped, lowered limit)
+- [x] `orders` + `order_items` snapshots (RLS on); read-only `/orders` history, other shoppers' orders reported as not found
+- [x] Frontend: add-to-cart on the product page, cart page, order history page, cart count in the header, sign-in page for members-only routes, "limit per order" field in the owner form
+- [x] Verified live: limits and stock conflicts, per-shopper isolation, sale starting while an item sits in the cart, cascade when a size is removed, snapshots surviving product deletion; the real shopper journey through the actual pages against the real API
+
+**Follow-ups found during M4**
+- [ ] **Click through it in a real browser** as a customer: sign in, add, change quantities, hit the limit, watch a sale change a price.
+- [ ] After signing in the shopper lands on the home page, not the product they were viewing. Needs a safe "return to" path (validated same-site, never a free redirect).
+- [ ] The header cart count updates in the current tab only (no cross-tab sync).
+- [ ] No order detail page yet (the API has `GET /orders/{id}`).
+- [ ] Stock is deliberately not held by the cart: two shoppers can hold the last item; checkout must re-check (M5).
+- [ ] Order lines keep a photo path, not the photo: if the owner later deletes that photo from Storage the history image will be broken.
 
 ## M5: Checkout + Flutterwave
 **Goal:** a customer pays and the order becomes paid exactly once.
 **Backend**
-- [ ] Delivery address capture (NGN only, no shipping calculation).
+- [ ] Delivery address capture (NGN only, no shipping calculation); add the address and payment columns (tx_ref, paid_at handling) to `orders` with a migration.
+- [ ] **Re-check everything at checkout** through `cart_totals`/`quote_variant`: stock, per-order limits, hidden pieces, prices; refuse a zero total; build the order lines as snapshots (`order_items`).
 - [ ] Create `pending` order from the cart; start Flutterwave payment with a unique `tx_ref`; return the payment link.
 - [ ] Webhook: **verify signature header**, **verify the transaction server-side with Flutterwave**, mark paid **idempotently**, decrement stock in **one database transaction**, clear the cart. Never trust the redirect alone.
-- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0011 (payment flow).
+- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0012 (payment flow).
 **Frontend**
 - [ ] Checkout page (address form, order summary, pay button) that redirects to Flutterwave.
 - [ ] Return page that reads the order status from the backend (poll briefly while the webhook lands), with success, failed and "still processing" states.
