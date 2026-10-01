@@ -19,7 +19,7 @@ export const renderAdminList = (view) => {
     notice.hidden = true;
     try {
       await deleteProduct(product.id);
-      await load(); // eslint-disable-line no-use-before-define
+      await load();
     } catch (error) {
       notice.textContent = error?.message ?? 'Could not delete that piece.';
       notice.hidden = false;

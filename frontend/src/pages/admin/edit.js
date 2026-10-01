@@ -113,9 +113,9 @@ const photoSection = ({ options, getProduct, setProduct }) => {
   const run = async (action, message) => {
     try {
       setProduct(await action());
-      draw(); // eslint-disable-line no-use-before-define
+      draw();
     } catch (error) {
-      draw(error?.message ?? message); // eslint-disable-line no-use-before-define
+      draw(error?.message ?? message);
     }
   };
 
@@ -184,7 +184,7 @@ export const renderAdminEdit = (view, { params, navigate }) => {
     try {
       // Here the size list is REQUIRED: without it there is no form to show.
       const [options, product] = await Promise.all([getCatalogueOptions(), isNew ? null : getAdminProduct(productId)]);
-      show(options, product); // eslint-disable-line no-use-before-define
+      show(options, product);
     } catch (error) {
       view.replaceChildren(error?.code === 'not_found' ? missing() : errorState(error, load));
     }
