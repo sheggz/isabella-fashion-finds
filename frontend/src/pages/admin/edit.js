@@ -77,6 +77,8 @@ const buildForm = (options, values) => {
       modeRadio('per_size', 'A different price for each size'),
     ),
     singlePrice,
+    field('Limit per order (optional)', el('input', { type: 'text', inputMode: 'numeric', name: 'maxPerOrder', value: values.maxPerOrder }), 'maxPerOrder',
+      'Most of this piece (all sizes together) one order may contain. Leave blank for no limit; use 1 for a one-of-a-kind find.'),
     el('label', { className: 'check' }, el('input', { type: 'checkbox', name: 'isActive', checked: values.isActive }), ' Visible in the shop'),
     el(
       'fieldset',
@@ -108,6 +110,7 @@ const readForm = (form, options) => {
     description: q('description').value,
     pricingMode: form.querySelector('input[name="pricingMode"]:checked')?.value ?? 'single',
     price: q('price').value,
+    maxPerOrder: q('maxPerOrder').value,
     isActive: q('isActive').checked,
     sizes: Object.fromEntries(options.sizes.map(({ value: size }) => [size, {
       enabled: q(`size-${size}-enabled`).checked,

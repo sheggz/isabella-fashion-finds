@@ -12,6 +12,7 @@ export const emptyForm = (options) => ({
   description: '',
   pricingMode: 'single',
   price: '',
+  maxPerOrder: '',
   isActive: true,
   sizes: Object.fromEntries(options.sizes.map((s) => [s.value, blankSize()])),
 });
@@ -24,6 +25,7 @@ export const productToForm = (product, options) => {
   form.description = product.description ?? '';
   form.pricingMode = perSize ? 'per_size' : 'single';
   form.price = perSize ? '' : koboToInput(product.price_kobo);
+  form.maxPerOrder = product.max_per_order === null || product.max_per_order === undefined ? '' : String(product.max_per_order);
   form.isActive = product.is_active;
   for (const variant of product.variants ?? []) {
     form.sizes[variant.size] = {
@@ -40,7 +42,7 @@ export const productToForm = (product, options) => {
  * Validate the form and build the API payload (the same shape for create and for "save piece").
  *
  * Returns `{ ok: true, value }` or `{ ok: false, errors }`, where `errors` maps a field key
- * (`name`, `price`, `sizes`, `size.M.stock`, `size.M.price`, `size.M.bust`) to a message. ALL
+ * (`name`, `price`, `maxPerOrder`, `sizes`, `size.M.stock`, `size.M.price`, `size.M.bust`) to a message. ALL
  * problems are collected so the owner can fix them in one go.
  *
  * Pricing: in "single" mode only the piece price is read and size prices are ignored; in
@@ -61,6 +63,16 @@ export const formToPayload = (form, options) => {
   if (!perSize) {
     pieceKobo = nairaToKobo(form.price);
     if (pieceKobo === null) errors.price = 'Enter a valid price, like 15000 or 15,000.50.';
+  }
+
+  // Optional: how many of this piece (all sizes together) one order may contain.
+  let maxPerOrder = null;
+  const limitText = String(form.maxPerOrder ?? '').trim();
+  if (limitText !== '') {
+    maxPerOrder = /^\d+$/.test(limitText) ? Number(limitText) : NaN;
+    if (!(maxPerOrder >= 1 && maxPerOrder <= 100)) {
+      errors.maxPerOrder = 'The limit per order must be a whole number from 1 to 100, or blank for no limit.';
+    }
   }
 
   const variants = [];
@@ -101,6 +113,7 @@ export const formToPayload = (form, options) => {
       description: form.description.trim() || null,
       pricing_mode: perSize ? 'per_size' : 'single',
       price_kobo: perSize ? null : pieceKobo,
+      max_per_order: maxPerOrder,
       is_active: form.isActive,
       variants,
     },

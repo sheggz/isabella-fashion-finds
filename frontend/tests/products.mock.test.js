@@ -4,7 +4,7 @@ import { getProduct, listProducts } from '../src/api/mocks/products.js';
 // These tests guard the CONTRACT: the mock must look exactly like the backend's ProductOut,
 // otherwise the UI would work against fake data and then break against the real API.
 const PRODUCT_KEYS = [
-  'created_at', 'description', 'discount', 'id', 'images', 'is_active', 'name',
+  'created_at', 'description', 'discount', 'id', 'images', 'is_active', 'max_per_order', 'name',
   'price_kobo', 'price_varies', 'pricing_mode', 'sale_price_kobo', 'variants',
 ];
 
@@ -15,7 +15,7 @@ describe('mock products api', () => {
     for (const p of products) {
       expect(Object.keys(p).sort()).toEqual(PRODUCT_KEYS);
       expect(Number.isInteger(p.price_kobo)).toBe(true); // money is integer kobo, never floats
-      for (const v of p.variants) expect(Object.keys(v).sort()).toEqual(['measurements', 'price_kobo', 'sale_price_kobo', 'size', 'stock']);
+      for (const v of p.variants) expect(Object.keys(v).sort()).toEqual(['id', 'measurements', 'price_kobo', 'sale_price_kobo', 'size', 'stock']);
       for (const i of p.images) expect(Object.keys(i).sort()).toEqual(['id', 'position', 'url']);
     }
   });

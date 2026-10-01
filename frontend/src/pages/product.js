@@ -1,10 +1,14 @@
+import { BASE_URL } from '../api/client.js';
 import { getCatalogueOptions } from '../api/catalogue.js';
 import { getProduct } from '../api/products.js';
 import { el, link } from '../components/dom.js';
 import { errorState, loading } from '../components/states.js';
 import { priceNode } from '../components/price.js';
+import { addToCartState } from '../lib/cart.js';
 import { discountNote, percentOff, priceDisplay, variantPriceDisplay } from '../lib/pricing.js';
 import { formatMeasurements, isSoldOut, sizeLabel, sortedImages, sortVariants } from '../lib/products.js';
+import { addItem } from '../state/cart.js';
+import { session } from '../state/session.js';
 
 const LOW_STOCK = 3;
 
@@ -65,15 +69,89 @@ const sizePicker = (product, options, onChange) => {
   return el('div', {}, sizes, details);
 };
 
+/**
+ * The "Add to cart" area. It follows two things: which size is chosen (`update`) and who is
+ * signed in (the session store), and redraws itself when either changes.
+ */
+const addToCartArea = (product, ceiling) => {
+  const area = el('div', { className: 'add-to-cart' });
+  let variant = null;
+  let quantity = 1;
+  let busy = false;
+  let confirmation = false;
+  let problem = '';
+
+  const draw = () => {
+    const { status, user } = session.get();
+    const state = addToCartState({
+      signedIn: status === 'ready' ? Boolean(user) : null,
+      product,
+      variant,
+      ceiling,
+      soldOut: isSoldOut(product),
+    });
+
+    if (state.kind === 'wait') { area.replaceChildren(); return; }
+    if (state.kind === 'signin') {
+      area.replaceChildren(el('a', { className: 'button primary sign-in-prompt', href: `${BASE_URL}/auth/google/login`, textContent: 'Sign in to add to cart' }));
+      return;
+    }
+    if (state.kind !== 'ready') {
+      area.replaceChildren(el('button', { type: 'button', className: 'button', disabled: true, textContent: state.kind === 'sold_out' ? 'Sold out' : 'Choose a size' }));
+      return;
+    }
+
+    quantity = Math.min(Math.max(quantity, 1), state.max);
+    const select = el('select', { name: 'quantity' }, ...Array.from({ length: state.max }, (_, i) => el('option', { value: String(i + 1), textContent: String(i + 1), selected: i + 1 === quantity })));
+    select.addEventListener('change', () => { quantity = Number(select.value); });
+
+    const add = el('button', { type: 'button', className: 'button primary add-to-cart', textContent: busy ? 'Adding…' : 'Add to cart', disabled: busy });
+    add.addEventListener('click', async () => {
+      if (busy) return; // ignore a second click while the first is still being added
+      busy = true; confirmation = false; problem = '';
+      draw();
+      try {
+        await addItem(variant.id, quantity);
+        confirmation = true;
+        quantity = 1;
+      } catch (error) {
+        problem = error?.message ?? 'Could not add that to your cart.';
+      } finally {
+        busy = false;
+        draw();
+      }
+    });
+
+    area.replaceChildren(
+      el('div', { className: 'add-row' }, el('label', {}, 'Quantity ', select), add),
+      product.max_per_order && el('p', { className: 'hint limit-note', textContent: `Limited to ${product.max_per_order} per order` }),
+      confirmation && el('p', { className: 'cart-status', attrs: { role: 'status' } }, 'Added to cart ✓ ', link('/cart', 'View cart')),
+      problem && el('p', { className: 'cart-error field-error', textContent: problem, attrs: { role: 'alert' } }),
+    );
+  };
+
+  draw();
+  return {
+    node: area,
+    update(next) { variant = next; confirmation = false; problem = ''; draw(); },
+    stop: session.subscribe(draw),
+  };
+};
+
 const missing = () =>
   el('div', { className: 'state' }, el('h1', { textContent: 'Piece not found' }), el('p', { textContent: 'This piece could not be found. It may have been removed.' }), link('/', 'Back to the shop'));
 
 export const renderProduct = (view, { params }) => {
+  let stopWatching = () => {};
+  let left = false; // set when the shopper leaves, so a page still loading does not start watching afterwards
+
   const load = async () => {
+    stopWatching();
     view.replaceChildren(loading());
     try {
       // The size list only improves labels and ordering, so its failure must not hide the piece.
       const [product, options] = await Promise.all([getProduct(params.id), getCatalogueOptions().catch(() => null)]);
+      if (left) return;
       // The price is its own block because it changes with the selected size (sizes can be
       // priced separately) and shows the sale while a discount is live.
       const priceBlock = el('div', { className: 'price-block' });
@@ -85,7 +163,12 @@ export const renderProduct = (view, { params }) => {
           product.discount && el('p', { className: 'discount-note', textContent: discountNote(product.discount, new Date().getTimezoneOffset()) }),
         );
       };
-      const picker = sizePicker(product, options, drawPrice);
+      const addArea = addToCartArea(product, options?.cart?.max_per_line);
+      stopWatching = addArea.stop;
+      const picker = sizePicker(product, options, (variant) => {
+        drawPrice(variant);
+        addArea.update(variant);
+      });
 
       view.replaceChildren(
         el(
@@ -100,6 +183,7 @@ export const renderProduct = (view, { params }) => {
             isSoldOut(product) && el('p', { className: 'badge', textContent: 'Sold out' }),
             product.description && el('p', { className: 'description', textContent: product.description }),
             picker,
+            addArea.node,
           ),
         ),
       );
@@ -109,4 +193,8 @@ export const renderProduct = (view, { params }) => {
   };
 
   load();
+  return () => { // the router calls this when the shopper leaves the page
+    left = true;
+    stopWatching();
+  };
 };

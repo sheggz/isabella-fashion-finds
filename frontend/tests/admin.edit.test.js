@@ -123,6 +123,7 @@ describe('new piece', () => {
       description: null,
       pricing_mode: 'single',
       price_kobo: 1500000,
+      max_per_order: null,
       is_active: true,
       variants: [{ size: 'M', stock: 3, measurements: { bust: 92 } }],
     });
@@ -183,6 +184,7 @@ describe('edit piece', () => {
       description: 'Hand-sewn',
       pricing_mode: 'single',
       price_kobo: 1600000,
+      max_per_order: null,
       is_active: false,
       variants: [{ size: 'M', stock: 2, measurements: { bust: 92 } }],
     });
@@ -339,6 +341,7 @@ describe('pricing: one price or a price per size', () => {
       description: null,
       pricing_mode: 'per_size',
       price_kobo: null,
+      max_per_order: null,
       is_active: true,
       variants: [
         { size: 'S', stock: 1, price_kobo: 1500000, measurements: {} },
@@ -378,5 +381,33 @@ describe('pricing: one price or a price per size', () => {
       price_kobo: null,
       variants: [{ size: 'M', stock: 2, price_kobo: 1200000, measurements: { bust: 92 } }],
     });
+  });
+});
+
+
+describe('limit per order', () => {
+  it('has an optional box, explained, and sends the number when filled', async () => {
+    admin.createProduct.mockResolvedValue({ id: 'new-3' });
+    await openNew();
+    expect(view.textContent).toMatch(/limit per order/i);
+    type('name', 'Rare find'); type('price', '5000'); type('maxPerOrder', '1');
+    tick('size-M-enabled'); type('size-M-stock', '1');
+    submit();
+    await vi.waitFor(() => expect(admin.createProduct).toHaveBeenCalledTimes(1));
+    expect(admin.createProduct.mock.calls[0][0].max_per_order).toBe(1);
+  });
+
+  it('shows an error under the box for a bad number and sends nothing', async () => {
+    await openNew();
+    type('name', 'Rare find'); type('price', '5000'); type('maxPerOrder', 'lots');
+    tick('size-M-enabled'); type('size-M-stock', '1');
+    submit();
+    expect(errorOf('maxPerOrder').textContent).toMatch(/limit/i);
+    expect(admin.createProduct).not.toHaveBeenCalled();
+  });
+
+  it('shows the saved limit when editing', async () => {
+    await openEdit(saved({ max_per_order: 2 }));
+    expect(field('maxPerOrder').value).toBe('2');
   });
 });

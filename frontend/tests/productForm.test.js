@@ -22,6 +22,7 @@ const form = (over = {}) => ({
   description: '  Hand-sewn  ',
   pricingMode: 'single',
   price: '15,000.50',
+  maxPerOrder: '',
   isActive: true,
   sizes: {
     M: row({ measurements: { bust: '92', waist: '' } }),
@@ -41,6 +42,7 @@ describe('formToPayload: one price for every size', () => {
         description: 'Hand-sewn',
         pricing_mode: 'single',
         price_kobo: 1500050,
+        max_per_order: null,
         is_active: true,
         variants: [{ size: 'M', stock: 3, measurements: { bust: 92 } }],
       },
@@ -71,6 +73,7 @@ describe('formToPayload: a price for each size', () => {
         description: 'Hand-sewn',
         pricing_mode: 'per_size',
         price_kobo: null,
+        max_per_order: null,
         is_active: true,
         variants: [
           { size: 'XS', stock: 1, price_kobo: 950050, measurements: {} },
@@ -155,6 +158,30 @@ describe('formToPayload: the rest of the form', () => {
   });
 });
 
+describe('the limit per order', () => {
+  it('is optional: blank means no limit', () => {
+    expect(formToPayload(form({ maxPerOrder: '' }), OPTIONS).value.max_per_order).toBeNull();
+    expect(formToPayload(form({ maxPerOrder: '   ' }), OPTIONS).value.max_per_order).toBeNull();
+  });
+
+  it('accepts a whole number from 1 to 100', () => {
+    expect(formToPayload(form({ maxPerOrder: '2' }), OPTIONS).value.max_per_order).toBe(2);
+    expect(formToPayload(form({ maxPerOrder: ' 100 ' }), OPTIONS).value.max_per_order).toBe(100);
+  });
+
+  it('rejects anything else, naming the field', () => {
+    for (const bad of ['0', '-1', '1.5', 'two', '101']) {
+      expect(formToPayload(form({ maxPerOrder: bad }), OPTIONS).errors.maxPerOrder).toMatch(/limit/i);
+    }
+  });
+
+  it('is filled in when editing a piece that has one, and blank when it has none', () => {
+    const base = { name: 'x', description: null, pricing_mode: 'single', price_kobo: 100, is_active: true, variants: [{ size: 'M', stock: 1, price_kobo: 100, measurements: {} }] };
+    expect(productToForm({ ...base, max_per_order: 3 }, OPTIONS).maxPerOrder).toBe('3');
+    expect(productToForm({ ...base, max_per_order: null }, OPTIONS).maxPerOrder).toBe('');
+  });
+});
+
 describe('productToForm', () => {
   const single = {
     name: 'Ankara Dress', description: null, pricing_mode: 'single', price_kobo: 1500050, is_active: false,
@@ -198,7 +225,7 @@ describe('productToForm', () => {
 describe('emptyForm', () => {
   it('starts visible, with one price for every size and every size switched off', () => {
     const f = emptyForm(OPTIONS);
-    expect(f).toMatchObject({ name: '', description: '', pricingMode: 'single', price: '', isActive: true });
+    expect(f).toMatchObject({ name: '', description: '', pricingMode: 'single', price: '', maxPerOrder: '', isActive: true });
     expect(Object.values(f.sizes).every((s) => s.enabled === false)).toBe(true);
     expect(Object.keys(f.sizes)).toEqual(['XS', 'S', 'M', 'ONE_SIZE']);
   });

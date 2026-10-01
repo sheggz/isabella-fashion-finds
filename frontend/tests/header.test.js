@@ -60,3 +60,34 @@ describe('header', () => {
     expect(host.querySelector('img')).toBeNull();
   });
 });
+
+
+describe('header: cart and orders', () => {
+  const state = (user) => ({ status: 'ready', user });
+
+  it('shows the cart with its item count and a link to order history when signed in', () => {
+    renderHeader(host, state({ name: 'Ada', role: 'customer' }), { cartCount: 3 });
+    const cart = host.querySelector('a[href="/cart"]');
+    expect(cart.textContent).toContain('Cart');
+    expect(cart.querySelector('.cart-count').textContent).toBe('3');
+    expect(host.querySelector('a[href="/orders"]')).not.toBeNull();
+  });
+
+  it('shows no count badge for an empty cart', () => {
+    renderHeader(host, state({ name: 'Ada', role: 'customer' }), { cartCount: 0 });
+    expect(host.querySelector('a[href="/cart"]')).not.toBeNull();
+    expect(host.querySelector('.cart-count')).toBeNull();
+  });
+
+  it('shows neither to signed-out visitors, who have no cart', () => {
+    renderHeader(host, state(null), { cartCount: 0 });
+    expect(host.querySelector('a[href="/cart"]')).toBeNull();
+    expect(host.querySelector('a[href="/orders"]')).toBeNull();
+  });
+
+  it('owners are shoppers too', () => {
+    renderHeader(host, state({ name: 'Isa', role: 'owner' }), { cartCount: 1 });
+    expect(host.querySelector('a[href="/cart"]')).not.toBeNull();
+    expect(host.querySelector('a[href="/admin"]')).not.toBeNull();
+  });
+});

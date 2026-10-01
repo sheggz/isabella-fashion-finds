@@ -8,11 +8,15 @@ import { el, link } from './dom.js';
  * While the session is still loading neither "Sign in" nor "Sign out" is shown, otherwise a
  * signed-in user would see the sign-in link flash for a moment on every page load.
  */
-export const renderHeader = (host, { status, user }, { onSignOut } = {}) => {
+export const renderHeader = (host, { status, user }, { onSignOut, cartCount = 0 } = {}) => {
   const nav = el('nav', { className: 'account', attrs: { 'aria-label': 'Account' } });
 
   if (status === 'ready' && user) {
     if (user.role === 'owner') nav.append(link('/admin', 'Manage shop'), link('/admin/discounts', 'Discounts'));
+    nav.append(
+      link('/orders', 'My orders'),
+      el('a', { href: '/cart', className: 'cart-link', dataset: { link: '' } }, 'Cart', cartCount > 0 && el('span', { className: 'cart-count', textContent: String(cartCount) })),
+    );
     const signOut = el('button', { type: 'button', className: 'sign-out', textContent: 'Sign out' });
     signOut.addEventListener('click', () => onSignOut?.());
     nav.append(el('span', { className: 'who', textContent: user.name || user.email }), signOut);

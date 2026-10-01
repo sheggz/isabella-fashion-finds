@@ -8,9 +8,19 @@ vi.mock('../src/api/products.js', () => ({
 vi.mock('../src/api/catalogue.js', () => ({
   getCatalogueOptions: vi.fn(),
 }));
+vi.mock('../src/api/cart.js', () => ({
+  getCart: vi.fn(),
+  addToCart: vi.fn(),
+  setCartQuantity: vi.fn(),
+  removeFromCart: vi.fn(),
+  clearCart: vi.fn(),
+}));
 
 import { getProduct } from '../src/api/products.js';
 import { getCatalogueOptions } from '../src/api/catalogue.js';
+import * as cartApi from '../src/api/cart.js';
+import { session } from '../src/state/session.js';
+import { resetCart } from '../src/state/cart.js';
 import { renderProduct } from '../src/pages/product.js';
 
 const OPTIONS = {
@@ -24,6 +34,7 @@ const OPTIONS = {
     { value: 'waist', label: 'Waist' },
   ],
   unit: 'cm',
+  cart: { max_per_line: 10 },
 };
 
 const product = (over = {}) => ({
@@ -40,9 +51,9 @@ const product = (over = {}) => ({
     { id: 'i1', position: 0, url: 'https://cdn.test/a.png' },
   ],
   variants: [
-    { size: 'S', stock: 0, price_kobo: 1500000, sale_price_kobo: null, measurements: { bust: 88 } },
-    { size: 'M', stock: 2, price_kobo: 1500000, sale_price_kobo: null, measurements: { bust: 92, waist: 74.3 } },
-    { size: 'ONE_SIZE', stock: 5, price_kobo: 1500000, sale_price_kobo: null, measurements: {} },
+    { id: 'v-S', size: 'S', stock: 0, price_kobo: 1500000, sale_price_kobo: null, measurements: { bust: 88 } },
+    { id: 'v-M', size: 'M', stock: 2, price_kobo: 1500000, sale_price_kobo: null, measurements: { bust: 92, waist: 74.3 } },
+    { id: 'v-ONE_SIZE', size: 'ONE_SIZE', stock: 5, price_kobo: 1500000, sale_price_kobo: null, measurements: {} },
   ],
   ...over,
 });
@@ -53,6 +64,8 @@ beforeEach(() => {
   view = document.querySelector('#view');
   vi.resetAllMocks();
   getCatalogueOptions.mockResolvedValue(OPTIONS);
+  session.set({ status: 'loading', user: null });
+  resetCart();
 });
 
 const open = async (p = product()) => {
@@ -160,8 +173,8 @@ describe('product page prices', () => {
     price_kobo: 1200000,
     price_varies: true,
     variants: [
-      { size: 'S', stock: 1, price_kobo: 1500000, sale_price_kobo: null, measurements: {} },
-      { size: 'M', stock: 2, price_kobo: 1200000, sale_price_kobo: null, measurements: {} },
+      { id: 'v-S', size: 'S', stock: 1, price_kobo: 1500000, sale_price_kobo: null, measurements: {} },
+      { id: 'v-M', size: 'M', stock: 2, price_kobo: 1200000, sale_price_kobo: null, measurements: {} },
     ],
     ...over,
   });
@@ -177,8 +190,8 @@ describe('product page prices', () => {
   it('shows "From" while no size can be chosen (everything sold out)', async () => {
     const soldOut = perSize({
       variants: [
-        { size: 'S', stock: 0, price_kobo: 1500000, sale_price_kobo: null, measurements: {} },
-        { size: 'M', stock: 0, price_kobo: 1200000, sale_price_kobo: null, measurements: {} },
+        { id: 'v-S', size: 'S', stock: 0, price_kobo: 1500000, sale_price_kobo: null, measurements: {} },
+        { id: 'v-M', size: 'M', stock: 0, price_kobo: 1200000, sale_price_kobo: null, measurements: {} },
       ],
     });
     await open(soldOut);
@@ -189,7 +202,7 @@ describe('product page prices', () => {
     const onSale = product({
       sale_price_kobo: 1350000,
       discount: { name: 'Weekend sale', ends_at: '2030-01-01T12:00:00Z' },
-      variants: [{ size: 'M', stock: 2, price_kobo: 1500000, sale_price_kobo: 1350000, measurements: {} }],
+      variants: [{ id: 'v-M', size: 'M', stock: 2, price_kobo: 1500000, sale_price_kobo: 1350000, measurements: {} }],
     });
     await open(onSale);
     const block = view.querySelector('.price-block');
@@ -204,8 +217,8 @@ describe('product page prices', () => {
       sale_price_kobo: 1080000,
       discount: { name: 'Sale', ends_at: '2030-01-01T12:00:00Z' },
       variants: [
-        { size: 'S', stock: 1, price_kobo: 1500000, sale_price_kobo: 1350000, measurements: {} },
-        { size: 'M', stock: 2, price_kobo: 1200000, sale_price_kobo: 1080000, measurements: {} },
+        { id: 'v-S', size: 'S', stock: 1, price_kobo: 1500000, sale_price_kobo: 1350000, measurements: {} },
+        { id: 'v-M', size: 'M', stock: 2, price_kobo: 1200000, sale_price_kobo: 1080000, measurements: {} },
       ],
     });
     await open(onSale);
@@ -219,5 +232,88 @@ describe('product page prices', () => {
     await open();
     expect(view.querySelector('.price-block s.was')).toBeNull();
     expect(view.querySelector('.discount-note')).toBeNull();
+  });
+});
+
+
+describe('add to cart', () => {
+  const signIn = () => session.set({ status: 'ready', user: { id: 'u1', name: 'Ada', role: 'customer' } });
+  const choices = () => [...view.querySelectorAll('select[name="quantity"] option')].map((o) => o.value);
+
+  it('waits quietly while we do not yet know who is signed in', async () => {
+    await open();
+    expect(view.querySelector('.add-to-cart a, .add-to-cart button')).toBeNull();
+  });
+
+  it('invites a signed-out visitor to sign in, with a link to the Google sign-in', async () => {
+    session.set({ status: 'ready', user: null });
+    await open();
+    const prompt = view.querySelector('.add-to-cart a.sign-in-prompt');
+    expect(prompt.textContent).toMatch(/sign in to add to cart/i);
+    expect(prompt.getAttribute('href')).toContain('/auth/google/login');
+    expect(view.querySelector('button.add-to-cart')).toBeNull();
+  });
+
+  it('offers a quantity up to the stock of the chosen size', async () => {
+    signIn();
+    await open();                                  // M (2 in stock) is pre-selected
+    expect(choices()).toEqual(['1', '2']);
+    view.querySelector('button.size[data-size="ONE_SIZE"]').click();
+    expect(choices()).toEqual(['1', '2', '3', '4', '5']);
+  });
+
+  it('never offers more than the line ceiling the server published', async () => {
+    signIn();
+    await open(product({ variants: [{ id: 'v-M', size: 'M', stock: 40, price_kobo: 1500000, sale_price_kobo: null, measurements: {} }] }));
+    expect(choices()).toHaveLength(10);
+  });
+
+  it('respects the owner\'s limit per order and says so', async () => {
+    signIn();
+    await open(product({ max_per_order: 1 }));
+    expect(choices()).toEqual(['1']);
+    expect(view.querySelector('.limit-note').textContent).toBe('Limited to 1 per order');
+  });
+
+  it('adds the chosen size and quantity, then confirms with a link to the cart', async () => {
+    signIn();
+    cartApi.addToCart.mockResolvedValue({ lines: [], item_count: 2, subtotal_kobo: 0, savings_kobo: 0, has_problems: false });
+    await open();
+    const select = view.querySelector('select[name="quantity"]');
+    select.value = '2';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    view.querySelector('button.add-to-cart').click();
+    await vi.waitFor(() => expect(cartApi.addToCart).toHaveBeenCalledWith('v-M', 2));
+    await vi.waitFor(() => expect(view.querySelector('.cart-status').textContent).toContain('Added to cart'));
+    expect(view.querySelector('.cart-status a[href="/cart"]')).not.toBeNull();
+  });
+
+  it('shows the shop\'s message when the server refuses', async () => {
+    signIn();
+    cartApi.addToCart.mockRejectedValue({ status: 409, code: 'out_of_stock', message: 'Only 2 left in this size', details: { allowed: 2, in_cart: 2 } });
+    await open();
+    view.querySelector('button.add-to-cart').click();
+    await vi.waitFor(() => expect(view.querySelector('.cart-error').textContent).toContain('Only 2 left in this size'));
+  });
+
+  it('ignores a second click while adding', async () => {
+    signIn();
+    let finish;
+    cartApi.addToCart.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    await open();
+    const button = view.querySelector('button.add-to-cart');
+    button.click();
+    button.click();
+    expect(cartApi.addToCart).toHaveBeenCalledTimes(1);
+    finish({ lines: [], item_count: 1, subtotal_kobo: 0, savings_kobo: 0, has_problems: false });
+  });
+
+  it('shows a disabled "Sold out" instead of a quantity picker when nothing can be bought', async () => {
+    signIn();
+    await open(product({ variants: [{ id: 'v-M', size: 'M', stock: 0, price_kobo: 1500000, sale_price_kobo: null, measurements: {} }] }));
+    expect(view.querySelector('select[name="quantity"]')).toBeNull();
+    const button = view.querySelector('.add-to-cart button');
+    expect(button.disabled).toBe(true);
+    expect(button.textContent).toBe('Sold out');
   });
 });

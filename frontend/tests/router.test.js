@@ -10,6 +10,7 @@ const routes = [
   { name: 'home', pattern: '/', render: (view) => { view.textContent = 'HOME'; } },
   { name: 'product', pattern: '/products/:id', render: (view, ctx) => { view.textContent = `PRODUCT ${ctx.params.id}`; } },
   { name: 'admin', pattern: '/admin', requires: 'owner', render: (view) => { view.textContent = 'ADMIN'; } },
+  { name: 'cart', pattern: '/cart', requires: 'user', render: (view) => { view.textContent = 'CART'; } },
 ];
 
 const make = () => {
@@ -86,6 +87,21 @@ describe('router', () => {
     user = { role: 'customer' };
     make();
     expect(container.textContent).not.toContain('ADMIN');
+  });
+
+  it('asks signed-out visitors to sign in before showing a members page, with a sign-in link', () => {
+    window.history.replaceState({}, '', '/cart');
+    make();
+    expect(container.textContent).not.toContain('CART');
+    expect(container.textContent).toMatch(/sign in/i);
+    expect(container.querySelector('a[href*="/auth/google/login"]')).not.toBeNull();
+  });
+
+  it('lets any signed-in user into a members page', () => {
+    user = { role: 'customer' };
+    window.history.replaceState({}, '', '/cart');
+    make();
+    expect(container.textContent).toBe('CART');
   });
 
   it('lets the owner in', () => {

@@ -1,6 +1,7 @@
 // A tiny router built on the History API: it changes the address bar and the page content
 // WITHOUT a full page reload. Matching itself is the pure `matchRoute` in lib/route.js.
 import { matchRoute } from './lib/route.js';
+import { BASE_URL } from './api/client.js';
 import { el, link } from './components/dom.js';
 
 const allowed = (requires, user) => {
@@ -14,6 +15,14 @@ const notFoundPage = (view) => {
     el('h1', { textContent: 'Page not found' }),
     el('p', { textContent: 'That page does not exist.' }),
     link('/', 'Back to the shop'),
+  );
+};
+
+const signInPage = (view) => {
+  view.replaceChildren(
+    el('h1', { textContent: 'Please sign in' }),
+    el('p', { textContent: 'Sign in to see this page.' }),
+    el('a', { className: 'sign-in', href: `${BASE_URL}/auth/google/login`, textContent: 'Sign in with Google' }),
   );
 };
 
@@ -55,7 +64,7 @@ export const createRouter = ({ routes, container, getUser }) => {
 
     const route = routes.find((r) => r.name === match.name);
     const user = getUser();
-    if (!allowed(route.requires, user)) return forbiddenPage(view, user);
+    if (!allowed(route.requires, user)) return route.requires === 'user' ? signInPage(view) : forbiddenPage(view, user);
 
     const result = route.render(view, { params: match.params, navigate });
     // A page may return its cleanup function directly, or a promise that resolves to one.

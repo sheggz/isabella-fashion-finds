@@ -3,9 +3,12 @@ import { renderHeader } from './components/header.js';
 import { renderAdminDiscounts } from './pages/admin/discounts.js';
 import { renderAdminEdit } from './pages/admin/edit.js';
 import { renderAdminList } from './pages/admin/list.js';
+import { renderCart } from './pages/cart.js';
 import { renderHome } from './pages/home.js';
+import { renderOrders } from './pages/orders.js';
 import { renderProduct } from './pages/product.js';
 import { createRouter } from './router.js';
+import { cart, loadCart, resetCart } from './state/cart.js';
 import { loadSession, session, signOut } from './state/session.js';
 
 // Pages are added here as milestones land. `requires` makes the router keep a page closed
@@ -13,6 +16,8 @@ import { loadSession, session, signOut } from './state/session.js';
 export const routes = [
   { name: 'home', pattern: '/', render: renderHome },
   { name: 'product', pattern: '/products/:id', render: renderProduct },
+  { name: 'cart', pattern: '/cart', requires: 'user', render: renderCart },
+  { name: 'orders', pattern: '/orders', requires: 'user', render: renderOrders },
   { name: 'admin', pattern: '/admin', requires: 'owner', render: renderAdminList },
   { name: 'adminDiscounts', pattern: '/admin/discounts', requires: 'owner', render: renderAdminDiscounts },
   // 'new' must come BEFORE ':id', otherwise the router would read "new" as a product id.
@@ -25,6 +30,7 @@ export const startApp = async ({ header, main }) => {
 
   const drawHeader = (state) =>
     renderHeader(header, state, {
+      cartCount: cart.get().data?.item_count ?? 0,
       onSignOut: async () => {
         await signOut();
         router.navigate('/');
@@ -32,7 +38,11 @@ export const startApp = async ({ header, main }) => {
     });
 
   drawHeader(session.get());
+  cart.subscribe(() => drawHeader(session.get())); // the header shows how many items are in the cart
   session.subscribe((state) => {
+    // The cart belongs to whoever is signed in: fetch it on sign-in, forget it on sign-out.
+    if (state.user) loadCart();
+    else resetCart();
     drawHeader(state);
     router.refresh(); // access rules may have changed (signed in or out)
   });
