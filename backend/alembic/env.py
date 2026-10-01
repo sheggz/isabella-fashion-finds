@@ -8,6 +8,7 @@ from logging.config import fileConfig
 # Importing the model modules registers their tables on Base.metadata (needed for autogenerate).
 import app.models.cart
 import app.models.discount
+import app.models.order
 import app.models.product
 import app.models.user  # noqa: F401
 from alembic import context

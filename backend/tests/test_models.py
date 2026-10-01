@@ -245,3 +245,48 @@ def test_one_line_per_shopper_per_size(session):
     session.add(CartItem(user_id=first.user_id, variant_id=first.variant_id, quantity=1, price_at_add_kobo=1000))
     with pytest.raises(IntegrityError):
         session.commit()
+
+
+# --- orders ---
+
+def make_order(session, **over):
+    from datetime import datetime, timezone
+
+    from app.models.order import Order
+    from app.models.user import User
+
+    user = User(google_sub="order-sub", email="order@example.test")
+    session.add(user)
+    session.flush()
+    return Order(**{"user_id": user.id, "status": "pending", "subtotal_kobo": 1000, "total_kobo": 1000, "currency": "NGN",
+                    "created_at": datetime(2026, 10, 1, tzinfo=timezone.utc), **over})
+
+
+def test_an_order_with_items_is_stored(session):
+    from app.models.order import Order, OrderItem
+
+    order = make_order(session)
+    order.items = [OrderItem(product_name="Dress", size="M", unit_price_kobo=1000, base_price_kobo=1000, quantity=1, line_total_kobo=1000)]
+    session.add(order)
+    session.commit()
+    got = session.scalars(select(Order)).one()
+    assert got.status == "pending" and [i.product_name for i in got.items] == ["Dress"]
+
+
+@pytest.mark.parametrize("bad", [{"status": "shipped"}, {"total_kobo": -1}, {"subtotal_kobo": -1}])
+def test_the_database_rejects_inconsistent_orders(session, bad):
+    session.add(make_order(session, **bad))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+@pytest.mark.parametrize("bad", [{"quantity": 0}, {"unit_price_kobo": -1}, {"line_total_kobo": -1}])
+def test_the_database_rejects_inconsistent_order_lines(session, bad):
+    from app.models.order import OrderItem
+
+    order = make_order(session)
+    order.items = [OrderItem(**{"product_name": "Dress", "size": "M", "unit_price_kobo": 1000, "base_price_kobo": 1000,
+                                "quantity": 1, "line_total_kobo": 1000, **bad})]
+    session.add(order)
+    with pytest.raises(IntegrityError):
+        session.commit()
