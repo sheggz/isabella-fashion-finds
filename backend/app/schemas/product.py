@@ -119,6 +119,7 @@ class VariantOut(BaseModel):
     stock: int
     measurements: dict[str, float]
     price_kobo: int  # this size's undiscounted price (the shared price in "single" mode)
+    sale_price_kobo: int | None = None  # what it costs right now while a discount is live
 
 
 class ImageOut(BaseModel):
@@ -139,6 +140,13 @@ class ReorderIn(BaseModel):
     image_ids: list[uuid.UUID]
 
 
+class DiscountBadge(BaseModel):
+    """The live discount a customer is shown on a piece."""
+
+    name: str
+    ends_at: datetime
+
+
 class ProductOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -148,6 +156,8 @@ class ProductOut(BaseModel):
     pricing_mode: str
     price_kobo: int | None  # the "from" price: the cheapest size's undiscounted price
     price_varies: bool  # True when sizes cost different amounts ("from" should be shown)
+    sale_price_kobo: int | None = None  # the cheapest price right now, only while a discount is live
+    discount: DiscountBadge | None = None
     is_active: bool
     created_at: datetime
     variants: list[VariantOut]

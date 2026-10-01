@@ -136,3 +136,62 @@ def test_deleting_a_product_removes_its_variants_and_images(session):
 
 def test_every_table_is_registered_for_migrations():
     assert {"products", "product_variants", "product_images"} <= set(Base.metadata.tables)
+
+
+# --- discounts ---
+
+def make_discount(**over):
+    from datetime import datetime, timedelta, timezone
+
+    from app.models.discount import Discount
+
+    now = datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc)
+    return Discount(**{
+        "name": "Sale", "kind": "percent", "percent_bp": 1000, "applies_to_all": True,
+        "starts_at": now, "ends_at": now + timedelta(days=1), **over,
+    })
+
+
+def test_a_valid_discount_is_stored_with_defaults(session):
+    session.add(make_discount())
+    session.commit()
+    from app.models.discount import Discount
+
+    d = session.scalars(select(Discount)).one()
+    assert d.is_enabled is True and d.id is not None and d.created_at is not None
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"kind": "bogus"},
+        {"percent_bp": 0},
+        {"percent_bp": 10000},                              # 100% would make the piece free
+        {"amount_kobo": 500},                               # a percent discount must not carry an amount
+        {"kind": "amount", "percent_bp": None, "amount_kobo": 0},
+        {"kind": "amount", "percent_bp": 1000, "amount_kobo": 500},
+    ],
+)
+def test_the_database_rejects_inconsistent_discount_values(session, bad):
+    session.add(make_discount(**bad))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_the_database_rejects_a_discount_that_ends_before_it_starts(session):
+    from datetime import datetime, timezone
+
+    session.add(make_discount(ends_at=datetime(2020, 1, 1, tzinfo=timezone.utc)))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_a_discount_can_be_linked_to_selected_pieces(session):
+    from app.models.discount import Discount
+
+    piece = make_product()
+    d = make_discount(applies_to_all=False)
+    d.products = [piece]
+    session.add_all([piece, d])
+    session.commit()
+    assert [p.name for p in session.scalars(select(Discount)).one().products] == ["Ankara Dress"]

@@ -7,6 +7,7 @@ so a price can never be computed two different ways.
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 
 PRICING_MODES = ("single", "per_size")
 
@@ -93,6 +94,28 @@ class ProductPricing:
     price_varies: bool
     sale_price_kobo: int | None
     discount: DiscountInfo | None
+
+
+def percent_to_bp(value) -> int:
+    """Convert a percentage typed by the owner ("12.5") into whole basis points (1250).
+
+    Done with `Decimal`, not floats, so 7.25 is exactly 725 and 10.001 is reliably refused.
+    Allowed: more than 0 and less than 100 (100% would make the piece free), at most two
+    decimal places. ValueError is used for every bad input, wrong types included, because
+    Pydantic only turns ValueError into a clean 422 (a TypeError would become a 500).
+    """
+    if isinstance(value, bool) or not isinstance(value, int | float | str):
+        raise ValueError("percentage must be a number")  # noqa: TRY004
+    try:
+        percent = Decimal(str(value))
+    except InvalidOperation:
+        raise ValueError("percentage must be a number") from None
+    if not percent.is_finite() or not (0 < percent < 100):
+        raise ValueError("percentage must be above 0 and below 100")
+    basis_points = percent * 100
+    if basis_points != basis_points.to_integral_value():
+        raise ValueError("percentage can have at most two decimal places")
+    return int(basis_points)
 
 
 def reduction_for(price_kobo: int, kind: str, percent_bp: int | None, amount_kobo: int | None) -> int:

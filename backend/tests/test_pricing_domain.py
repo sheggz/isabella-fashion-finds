@@ -197,3 +197,20 @@ def test_product_summary_reports_the_lowest_sale_price_and_its_discount():
 def test_product_summary_of_nothing_is_empty_not_a_crash():
     s = product_pricing([])
     assert s.from_price_kobo is None and s.sale_price_kobo is None
+
+
+# --- turning what an owner types ("12.5") into whole basis points ---
+
+@pytest.mark.parametrize(("text", "bp"), [(10, 1000), (12.5, 1250), ("7.25", 725), (0.01, 1), (99.99, 9999)])
+def test_percent_to_basis_points_is_exact(text, bp):
+    from app.domain.pricing import percent_to_bp
+
+    assert percent_to_bp(text) == bp
+
+
+@pytest.mark.parametrize("bad", [0, -5, 100, 150, 10.001, "abc", None, True, float("nan")])
+def test_percent_must_be_between_0_and_100_with_at_most_two_decimals(bad):
+    from app.domain.pricing import percent_to_bp
+
+    with pytest.raises(ValueError):
+        percent_to_bp(bad)
