@@ -6,7 +6,7 @@ from app.core.handlers import register_handlers
 from app.core.log import configure_logging
 from app.middleware.access_log import AccessLogMiddleware
 from app.middleware.request_id import RequestIdMiddleware
-from app.routers import auth, catalogue, health, images, products
+from app.routers import admin, auth, catalogue, health, images, products
 
 
 def create_app() -> FastAPI:
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(catalogue.router)
     app.include_router(products.router)
     app.include_router(images.router)
+    app.include_router(admin.router)
     return app
 
 
