@@ -1,5 +1,6 @@
 // Wires the pieces together: session -> header, router -> pages.
 import { renderHeader } from './components/header.js';
+import { renderAdminDiscounts } from './pages/admin/discounts.js';
 import { renderAdminEdit } from './pages/admin/edit.js';
 import { renderAdminList } from './pages/admin/list.js';
 import { renderHome } from './pages/home.js';
@@ -13,6 +14,7 @@ export const routes = [
   { name: 'home', pattern: '/', render: renderHome },
   { name: 'product', pattern: '/products/:id', render: renderProduct },
   { name: 'admin', pattern: '/admin', requires: 'owner', render: renderAdminList },
+  { name: 'adminDiscounts', pattern: '/admin/discounts', requires: 'owner', render: renderAdminDiscounts },
   // 'new' must come BEFORE ':id', otherwise the router would read "new" as a product id.
   { name: 'adminNew', pattern: '/admin/products/new', requires: 'owner', render: renderAdminEdit },
   { name: 'adminEdit', pattern: '/admin/products/:id', requires: 'owner', render: renderAdminEdit },

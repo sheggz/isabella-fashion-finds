@@ -56,3 +56,14 @@ describe('formatWhen', () => {
     expect(formatWhen('garbage', 0)).toBe('');
   });
 });
+
+describe('zoneLabel', () => {
+  it('names the viewer\'s zone from the offset, with the sign flipped to the familiar UTC+/-', async () => {
+    const { zoneLabel } = await import('../src/lib/time.js');
+    expect(zoneLabel(-60)).toBe('UTC+1');   // Lagos
+    expect(zoneLabel(300)).toBe('UTC-5');
+    expect(zoneLabel(0)).toBe('UTC');
+    expect(zoneLabel(-330)).toBe('UTC+5:30');
+    expect(zoneLabel(210)).toBe('UTC-3:30');
+  });
+});

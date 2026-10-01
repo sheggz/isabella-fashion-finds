@@ -47,3 +47,16 @@ export const formatWhen = (iso, tzOffsetMinutes) => {
   const clock = `${hours % 12 || 12}:${pad(d.getUTCMinutes())} ${hours < 12 ? 'am' : 'pm'}`;
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${clock}`;
 };
+
+/**
+ * A familiar zone name from a `getTimezoneOffset()` value: -60 -> "UTC+1", 300 -> "UTC-5",
+ * -330 -> "UTC+5:30". The sign is flipped because the offset counts minutes BEHIND UTC, so a
+ * zone ahead of UTC (like Lagos) has a negative offset.
+ */
+export const zoneLabel = (tzOffsetMinutes) => {
+  if (tzOffsetMinutes === 0) return 'UTC';
+  const ahead = -tzOffsetMinutes;
+  const abs = Math.abs(ahead);
+  const minutes = abs % 60;
+  return `UTC${ahead > 0 ? '+' : '-'}${Math.floor(abs / 60)}${minutes ? `:${pad(minutes)}` : ''}`;
+};

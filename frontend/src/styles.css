@@ -132,3 +132,12 @@ button.danger { color: var(--danger); border-color: var(--danger); background: t
 
 /* pricing controls in the owner's form */
 .pricing-mode { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; display: grid; gap: 6px; }
+
+/* discounts screen */
+.badge.status-live { background: #1d7a46; color: #fff; }
+.badge.status-scheduled { background: #1b5fa8; color: #fff; }
+.badge.status-ended, .badge.status-disabled { background: var(--muted); color: var(--bg); }
+.zone-note { max-width: 640px; }
+.form-title { margin-top: 32px; }
+.product-picker { display: grid; gap: 6px; max-height: 220px; overflow: auto; padding: 8px 0; }
+.discount-form { margin-bottom: 40px; }
