@@ -41,6 +41,7 @@ class Product(Base):
     __table_args__ = (
         CheckConstraint("price_kobo >= 0", name="ck_products_price_non_negative"),
         CheckConstraint(PRICING_MODE_CHECK_SQL, name="ck_products_pricing_mode_known"),
+        CheckConstraint("max_per_order >= 1", name="ck_products_max_per_order_positive"),
         CheckConstraint(
             "(pricing_mode = 'single') = (price_kobo IS NOT NULL)", name="ck_products_price_matches_mode"
         ),
@@ -51,6 +52,8 @@ class Product(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)  # optional on purpose
     pricing_mode: Mapped[str] = mapped_column(String(10), default="single", server_default="single")
     price_kobo: Mapped[int | None] = mapped_column(Integer, nullable=True)  # only in "single" mode
+    # Owner-set limit on how many of this piece (all sizes together) one order may contain.
+    max_per_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

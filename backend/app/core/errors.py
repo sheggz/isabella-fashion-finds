@@ -35,6 +35,10 @@ class BadRequest(AppError):
     code = "bad_request"
 
 
+class LimitExceeded(Conflict):
+    code = "limit_exceeded"
+
+
 class Unauthorized(AppError):
     status_code = 401
     code = "unauthorized"

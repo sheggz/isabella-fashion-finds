@@ -64,6 +64,7 @@ class ProductCreate(BaseModel):
     description: str | None = Field(default=None, max_length=5000)  # optional
     pricing_mode: Literal["single", "per_size"] = "single"
     price_kobo: int | None = Field(default=None, ge=0)  # the one price, in "single" mode only
+    max_per_order: int | None = Field(default=None, ge=1, le=100)  # optional owner limit per order
     is_active: bool = True
     variants: VariantList
 
@@ -94,6 +95,7 @@ class ProductUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=5000)
     price_kobo: int | None = Field(default=None, ge=0)
+    max_per_order: int | None = Field(default=None, ge=1, le=100)
     is_active: bool | None = None
 
     @field_validator("name")
@@ -115,6 +117,7 @@ class ProductUpdate(BaseModel):
 class VariantOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    id: uuid.UUID  # needed to add this exact size to the cart
     size: str
     stock: int
     measurements: dict[str, float]
@@ -158,6 +161,7 @@ class ProductOut(BaseModel):
     price_varies: bool  # True when sizes cost different amounts ("from" should be shown)
     sale_price_kobo: int | None = None  # the cheapest price right now, only while a discount is live
     discount: DiscountBadge | None = None
+    max_per_order: int | None = None  # at most this many of the piece (all sizes) per order
     is_active: bool
     created_at: datetime
     variants: list[VariantOut]

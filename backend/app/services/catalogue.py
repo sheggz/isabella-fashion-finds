@@ -17,6 +17,7 @@ def create_product(session: Session, data: ProductCreate) -> Product:
         description=data.description,
         pricing_mode=data.pricing_mode,
         price_kobo=data.price_kobo,
+        max_per_order=data.max_per_order,
         is_active=data.is_active,
         variants=[
             ProductVariant(size=v.size, stock=v.stock, price_kobo=v.price_kobo, measurements=v.measurements)
@@ -70,6 +71,7 @@ def replace_product(session: Session, product_id: uuid.UUID, data: ProductCreate
     product.description = data.description
     product.pricing_mode = data.pricing_mode
     product.price_kobo = data.price_kobo
+    product.max_per_order = data.max_per_order
     product.is_active = data.is_active
     _apply_variants(product, data.variants)
     session.commit()

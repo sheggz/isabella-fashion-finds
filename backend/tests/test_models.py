@@ -195,3 +195,53 @@ def test_a_discount_can_be_linked_to_selected_pieces(session):
     session.add_all([piece, d])
     session.commit()
     assert [p.name for p in session.scalars(select(Discount)).one().products] == ["Ankara Dress"]
+
+
+# --- cart items and the per-order limit ---
+
+def test_a_piece_may_carry_an_optional_per_order_limit_of_at_least_one(session):
+    session.add(make_product(max_per_order=2))
+    session.commit()
+    assert session.scalars(select(Product)).one().max_per_order == 2
+    session.add(make_product(max_per_order=0))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def make_cart_item(session, **over):
+    from app.models.cart import CartItem
+    from app.models.user import User
+
+    user = User(google_sub="cart-sub", email="cart@example.test")
+    piece = make_product()
+    piece.variants = [ProductVariant(size="S", stock=5)]
+    session.add_all([user, piece])
+    session.flush()
+    return CartItem(**{"user_id": user.id, "variant_id": piece.variants[0].id, "quantity": 1, "price_at_add_kobo": 1000, **over})
+
+
+def test_a_cart_item_stores_quantity_and_the_price_seen_when_added(session):
+    from app.models.cart import CartItem
+
+    session.add(make_cart_item(session, quantity=3))
+    session.commit()
+    item = session.scalars(select(CartItem)).one()
+    assert (item.quantity, item.price_at_add_kobo) == (3, 1000)
+    assert item.created_at is not None
+
+
+def test_a_cart_item_must_have_a_positive_quantity(session):
+    session.add(make_cart_item(session, quantity=0))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_one_line_per_shopper_per_size(session):
+    from app.models.cart import CartItem
+
+    first = make_cart_item(session)
+    session.add(first)
+    session.commit()
+    session.add(CartItem(user_id=first.user_id, variant_id=first.variant_id, quantity=1, price_at_add_kobo=1000))
+    with pytest.raises(IntegrityError):
+        session.commit()

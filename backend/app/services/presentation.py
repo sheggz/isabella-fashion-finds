@@ -40,10 +40,12 @@ def present_product(
             if summary.discount
             else None
         ),
+        max_per_order=product.max_per_order,
         is_active=product.is_active,
         created_at=product.created_at,
         variants=[
             VariantOut(
+                id=v.id,
                 size=v.size,
                 stock=v.stock,
                 measurements=v.measurements,
