@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -13,11 +14,17 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
     true,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.domain.sizing import SIZES
+
+# Built from the same constant the schemas validate against, so they cannot drift apart.
+SIZE_CHECK_SQL = "size in (" + ", ".join(f"'{s}'" for s in SIZES) + ")"
 
 
 class Product(Base):
@@ -43,11 +50,17 @@ class Product(Base):
 
 
 class ProductVariant(Base):
-    """One size of one product, with its own stock count."""
+    """One size of one product, with its own stock count and optional measurements (cm).
+
+    Measurements live on the variant (not a global size chart) because the same size label
+    is cut differently on different pieces. They are stored as JSON: JSONB on Postgres, plain
+    JSON elsewhere (the in-memory SQLite used by tests).
+    """
 
     __tablename__ = "product_variants"
     __table_args__ = (
         CheckConstraint("stock >= 0", name="ck_variants_stock_non_negative"),
+        CheckConstraint(SIZE_CHECK_SQL, name="ck_variants_size_known"),
         UniqueConstraint("product_id", "size", name="uq_variants_product_size"),
     )
 
@@ -57,6 +70,9 @@ class ProductVariant(Base):
     )
     size: Mapped[str] = mapped_column(String(20))
     stock: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    measurements: Mapped[dict] = mapped_column(
+        JSON().with_variant(JSONB(), "postgresql"), default=dict, server_default=text("'{}'")
+    )
 
     product: Mapped[Product] = relationship(back_populates="variants")
 

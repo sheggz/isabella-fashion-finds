@@ -1,8 +1,11 @@
 """Request/response shapes. Validation happens here, at the HTTP boundary."""
 import uuid
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+
+from app.domain.sizing import normalize_size, validate_measurements
 
 
 def _clean_optional(value: str | None) -> str | None:
@@ -14,23 +17,34 @@ def _clean_optional(value: str | None) -> str | None:
 
 
 class VariantIn(BaseModel):
-    size: str = Field(min_length=1, max_length=20)
+    size: str
     stock: int = Field(ge=0)
+    measurements: dict[str, float] = Field(default_factory=dict)  # centimetres, optional
 
-    @field_validator("size")
+    @field_validator("size", mode="before")
     @classmethod
-    def trim_size(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("size must not be blank")
-        return v
+    def canonical_size(cls, v):
+        return normalize_size(v)
+
+    @field_validator("measurements", mode="before")
+    @classmethod
+    def clean_measurements(cls, v):
+        # Runs BEFORE Pydantic's own float coercion so our rules (known body parts, positive,
+        # at most 300 cm, no booleans) produce the error messages the owner sees.
+        return validate_measurements(v)
 
 
 def _ensure_unique_sizes(variants: list[VariantIn]) -> list[VariantIn]:
-    sizes = [v.size.casefold() for v in variants]
+    sizes = [v.size for v in variants]  # already canonical, so "m" and "M" collide
     if len(sizes) != len(set(sizes)):
         raise ValueError("each size may appear only once")
     return variants
+
+
+# Used by BOTH product creation and the "replace variants" endpoint, so the rules can't diverge.
+VariantList = Annotated[
+    list[VariantIn], Field(min_length=1), AfterValidator(_ensure_unique_sizes)
+]
 
 
 class ProductCreate(BaseModel):
@@ -38,7 +52,7 @@ class ProductCreate(BaseModel):
     description: str | None = Field(default=None, max_length=5000)  # optional
     price_kobo: int = Field(ge=0)
     is_active: bool = True
-    variants: list[VariantIn] = Field(min_length=1)
+    variants: VariantList
 
     @field_validator("name")
     @classmethod
@@ -52,11 +66,6 @@ class ProductCreate(BaseModel):
     @classmethod
     def clean_description(cls, v: str | None) -> str | None:
         return _clean_optional(v)
-
-    @field_validator("variants")
-    @classmethod
-    def unique_sizes(cls, v: list[VariantIn]) -> list[VariantIn]:
-        return _ensure_unique_sizes(v)
 
 
 class ProductUpdate(BaseModel):
@@ -88,6 +97,7 @@ class VariantOut(BaseModel):
 
     size: str
     stock: int
+    measurements: dict[str, float]
 
 
 class ProductOut(BaseModel):

@@ -61,7 +61,45 @@ def test_at_least_one_variant_is_required():
         new(variants=[])
 
 
+def test_sizes_are_normalised_to_the_fixed_list():
+    assert new(variants=[{"size": " m ", "stock": 1}]).variants[0].size == "M"
+    assert new(variants=[{"size": "one size", "stock": 1}]).variants[0].size == "ONE_SIZE"
+
+
+def test_a_size_outside_the_list_is_rejected():
+    with pytest.raises(ValidationError):
+        VariantIn(size="XXXL", stock=1)
+
+
+def test_measurements_are_validated_per_size():
+    ok = VariantIn(size="M", stock=1, measurements={"bust": 92, "waist": 74})
+    assert ok.measurements == {"bust": 92.0, "waist": 74.0}
+    with pytest.raises(ValidationError):
+        VariantIn(size="M", stock=1, measurements={"earlobe": 3})
+    with pytest.raises(ValidationError):
+        VariantIn(size="M", stock=1, measurements={"bust": -4})
+
+
 # --- service behaviour ---
+
+def test_measurements_are_stored_and_returned_with_each_size(session):
+    created = catalogue.create_product(
+        session,
+        new(variants=[
+            {"size": "S", "stock": 2},
+            {"size": "M", "stock": 1, "measurements": {"bust": 92, "length": 110}},
+        ]),
+    )
+    got = {v.size: v.measurements for v in catalogue.get_product(session, created.id).variants}
+    assert got == {"S": {}, "M": {"bust": 92.0, "length": 110.0}}
+
+
+def test_replace_variants_updates_measurements_of_existing_sizes(session):
+    p = catalogue.create_product(session, new())
+    result = catalogue.replace_variants(
+        session, p.id, [VariantIn(size="M", stock=1, measurements={"waist": 70})]
+    )
+    assert {v.size: v.measurements for v in result.variants} == {"M": {"waist": 70.0}}
 
 def test_create_then_get_round_trips(session):
     created = catalogue.create_product(session, new(description="Hand-sewn"))

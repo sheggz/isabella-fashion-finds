@@ -56,6 +56,26 @@ def test_negative_stock_is_rejected(session):
         session.commit()
 
 
+def test_a_size_outside_the_fixed_list_is_rejected_by_the_database(session):
+    p = make_product()
+    p.variants = [ProductVariant(size="HUGE", stock=1)]
+    session.add(p)
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_measurements_default_to_empty_and_round_trip(session):
+    p = make_product()
+    p.variants = [
+        ProductVariant(size="S", stock=1),
+        ProductVariant(size="M", stock=1, measurements={"bust": 92.0, "waist": 74.0}),
+    ]
+    session.add(p)
+    session.commit()
+    by_size = {v.size: v.measurements for v in session.scalars(select(Product)).one().variants}
+    assert by_size == {"S": {}, "M": {"bust": 92.0, "waist": 74.0}}
+
+
 def test_same_size_twice_for_one_product_is_rejected(session):
     p = make_product()
     p.variants = [ProductVariant(size="S", stock=1), ProductVariant(size="S", stock=1)]

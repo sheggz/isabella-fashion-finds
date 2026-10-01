@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import require_owner
 from app.db.session import get_session
-from app.schemas.product import ProductCreate, ProductOut, ProductUpdate, VariantIn
+from app.schemas.product import ProductCreate, ProductOut, ProductUpdate, VariantList
 from app.services import catalogue
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -41,7 +41,7 @@ def update_product(product_id: uuid.UUID, data: ProductUpdate, session: DbSessio
 
 
 @router.put("/{product_id}/variants", response_model=ProductOut, dependencies=OwnerOnly)
-def replace_variants(product_id: uuid.UUID, variants: list[VariantIn], session: DbSession):
+def replace_variants(product_id: uuid.UUID, variants: VariantList, session: DbSession):
     return catalogue.replace_variants(session, product_id, variants)
 
 

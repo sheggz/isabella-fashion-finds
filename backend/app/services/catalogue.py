@@ -15,7 +15,10 @@ def create_product(session: Session, data: ProductCreate) -> Product:
         description=data.description,
         price_kobo=data.price_kobo,
         is_active=data.is_active,
-        variants=[ProductVariant(size=v.size, stock=v.stock) for v in data.variants],
+        variants=[
+            ProductVariant(size=v.size, stock=v.stock, measurements=v.measurements)
+            for v in data.variants
+        ],
     )
     repo.add(session, product)
     session.commit()
@@ -44,20 +47,25 @@ def update_product(session: Session, product_id: uuid.UUID, data: ProductUpdate)
     return product
 
 
-def replace_variants(session: Session, product_id: uuid.UUID, variants: list[VariantIn]) -> Product:
-    """Upsert by size; sizes not mentioned are removed."""
+def replace_variants(
+    session: Session, product_id: uuid.UUID, variants: list[VariantIn]
+) -> Product:
+    """Upsert by size (stock and measurements); sizes not mentioned are removed."""
     product = get_product(session, product_id, include_inactive=True)
-    wanted = {v.size: v.stock for v in variants}
+    wanted = {v.size: v for v in variants}  # sizes are unique: the schema guarantees it
     existing = {v.size: v for v in product.variants}
 
     for size, variant in existing.items():
         if size not in wanted:
             product.variants.remove(variant)  # delete-orphan cascade deletes the row
         else:
-            variant.stock = wanted[size]
-    for size, stock in wanted.items():
+            variant.stock = wanted[size].stock
+            variant.measurements = wanted[size].measurements  # replace, don't mutate in place
+    for size, incoming in wanted.items():
         if size not in existing:
-            product.variants.append(ProductVariant(size=size, stock=stock))
+            product.variants.append(
+                ProductVariant(size=size, stock=incoming.stock, measurements=incoming.measurements)
+            )
     session.commit()
     return product
 
