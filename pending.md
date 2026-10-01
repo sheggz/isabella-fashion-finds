@@ -1,6 +1,6 @@
 # Pending work and roadmap
 
-Last updated: 2026-10-01 (after M1b). Context: **close deadline, solo developer, also here to learn.** Update this file whenever something is finished or discovered.
+Last updated: 2026-10-01 (after M3). Context: **close deadline, solo developer, also here to learn.** Update this file whenever something is finished or discovered.
 
 ## How we work through the milestones
 - Every milestone is a **vertical slice**: backend + frontend + tests + docs, finishing with something you can click through. Nothing "backend only" is left waiting for a UI.
@@ -16,15 +16,15 @@ Last updated: 2026-10-01 (after M1b). Context: **close deadline, solo developer,
 | M2 Google sign-in | Done | Sessions, roles. **Browser login confirmed working by the developer** |
 | Logging system | Done | Structured logs, request ids, no URL/query-string leaks |
 | M1b Images + storefront + owner dashboard | **Built and tested; needs your browser click-through** | Backend verified live as owner; UI verified in jsdom only |
-| **D1 Deploy checkpoint** | **Next** | Needs the hosting decision |
-| M3 Discounts | Planned | |
-| M4 Cart + order history | Planned | |
+| M3 Discounts + per-size pricing | **Built and tested; needs your browser click-through** | Backend verified live (real DB), pages in jsdom against the real API |
+| D1 Deploy checkpoint | **Postponed by decision** | Hosting to be chosen later |
+| **M4 Cart + order history** | **Next** | |
 | M5 Checkout + Flutterwave | Planned | |
 | M6 Mailgun emails | Planned | |
 | M7 Reviews and ratings | Planned | |
 | M8 Hardening + final deploy | Planned | |
 
-Tests today: 213 backend, 140 frontend. Backend lint clean; no frontend linter yet.
+Tests today: 346 backend, 225 frontend. Backend lint clean; no frontend linter yet.
 
 ## Frontend conventions (apply from M1b onward)
 Plain JavaScript (ES modules) + Vite + Vitest, no framework yet. Layout under `frontend/src/`:
@@ -67,17 +67,25 @@ Deploying late is the biggest risk for a close deadline, so deploy the M1b versi
 - [ ] Create the GitHub repo and push so **CI runs for the first time** and the code is backed up.
 **Done when:** a public URL shows the catalogue and the owner can sign in there.
 
-## M3: Scheduled discounts
-**Goal:** the owner schedules a discount; customers see it the moment it goes live.
-**Backend**
-- [ ] `discounts` table (starts_at, ends_at, percent or amount, scope: all or specific products) + migration with RLS.
-- [ ] **Pure** `effective_price(price, discounts, now)` (ADR 0005); product responses include `price_kobo`, `discounted_price_kobo`, `discount_ends_at`.
-- [ ] Owner endpoints: create/list/edit/cancel discounts; validation (end after start, sane percent).
-- [ ] A single pricing service function that cart and checkout will reuse (so later milestones never re-implement pricing).
-**Frontend**
-- [ ] Owner: discounts screen (create/schedule form, list with status: scheduled/live/ended).
-- [ ] Storefront: sale badge, struck-through original price, "ends on" note; display logic in `lib/` (pure, tested).
-**Done when:** a discount scheduled a minute ahead appears on the storefront without a reload-time hack or any cron job.
+## M3: Scheduled discounts + per-size pricing (DONE, pending your browser check)
+**Delivered:** the owner chooses, per piece, one price for every size or a different price for each size, and schedules percentage or fixed-amount discounts (every piece or selected pieces) that customers see exactly while they are live.
+
+- [x] Pricing mode per piece (`single` / `per_size`), enforced by schema and database checks (ADR 0010)
+- [x] One atomic `PUT /products/{id}` saves details, mode, prices and sizes (also fixes the M1b "two requests on save" follow-up)
+- [x] `discounts` + `discount_products` tables, RLS on; owner CRUD under `/admin/discounts`
+- [x] Pure pricing rules (`app/domain/pricing.py`): live window, best single discount (no stacking), never below 1 kobo, integer basis points
+- [x] Storefront: "From" prices, struck-through original, sale price, -N% badge, size-dependent price, "ends on" note in the shopper's zone
+- [x] Owner: pricing-mode controls in the product form; Discounts screen (list with status, create/edit, delete)
+- [x] Verified live: sale prices for both modes, scheduled discount invisible until it starts, role checks, DB constraints, cascades, real pages against the real API
+
+**Follow-ups found during M3**
+- [ ] **Click through it in a real browser**: create a per-size piece, set a discount a few minutes ahead and watch it appear after a refresh.
+- [ ] A customer with a page already open sees a discount only after refreshing (nothing pushes it). Consider a light refresh when the tab regains focus.
+- [ ] Both start and end are required; there is no open-ended discount.
+- [ ] Discounts do not stack and cannot target individual sizes (by decision; revisit if the owner needs it).
+- [ ] **M4/M5 must price through `quote_variant`** (never re-implement pricing) and snapshot the price on the order; checkout should also refuse a zero total.
+- [ ] The Discounts list has no pagination or search yet.
+- [ ] No sorting or filtering by price on the storefront.
 
 ## M4: Cart + order history
 **Goal:** signed-in customers keep a cart and can see their orders.
@@ -96,7 +104,7 @@ Deploying late is the biggest risk for a close deadline, so deploy the M1b versi
 - [ ] Delivery address capture (NGN only, no shipping calculation).
 - [ ] Create `pending` order from the cart; start Flutterwave payment with a unique `tx_ref`; return the payment link.
 - [ ] Webhook: **verify signature header**, **verify the transaction server-side with Flutterwave**, mark paid **idempotently**, decrement stock in **one database transaction**, clear the cart. Never trust the redirect alone.
-- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0010 (payment flow).
+- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0011 (payment flow).
 **Frontend**
 - [ ] Checkout page (address form, order summary, pay button) that redirects to Flutterwave.
 - [ ] Return page that reads the order status from the backend (poll briefly while the webhook lands), with success, failed and "still processing" states.
