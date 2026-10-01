@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     supabase_url: str = ""
     supabase_service_key: str = ""
+    storage_bucket: str = "product-images"
 
     google_client_id: str = ""
     google_client_secret: str = ""

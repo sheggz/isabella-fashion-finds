@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.errors import AppError
@@ -75,7 +76,39 @@ async def _unhandled(request: Request, exc: Exception):
     return error_response(request, 500, "internal_error", "Something went wrong")
 
 
+def is_unique_violation(exc: IntegrityError) -> bool:
+    """True only for "this value already exists" database errors.
+
+    Postgres reports the cause as an SQLSTATE code on the driver error (23505 = unique
+    violation; 23503 foreign key, 23514 check, 23502 not-null are different problems). SQLite,
+    used in our tests, only gives a message, so it is the fallback when there is no code.
+    """
+    orig = exc.orig
+    state = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    if state:
+        return state == "23505"
+    return "UNIQUE constraint failed" in str(orig)
+
+
+async def _integrity_error(request: Request, exc: IntegrityError):
+    """Turn "that already exists" races into a 409; leave every other integrity error a 500.
+
+    Two requests inserting the same unique value at once can both pass our checks and one then
+    loses at the database: that is a conflict the user can understand and retry. A CHECK or
+    foreign-key failure means our own validation missed something, which is a bug and must stay
+    a loud 500. The constraint name and offending values stay out of the response and the log
+    (Postgres messages can contain emails or other personal data).
+    """
+    if is_unique_violation(exc):
+        logger.warning("Unique constraint conflict", extra={"request_id": _request_id(request)})
+        return error_response(
+            request, 409, "conflict", "That conflicts with something that already exists"
+        )
+    return await _unhandled(request, exc)
+
+
 def register_handlers(app: FastAPI) -> None:
+    app.add_exception_handler(IntegrityError, _integrity_error)
     app.add_exception_handler(AppError, _app_error)
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)

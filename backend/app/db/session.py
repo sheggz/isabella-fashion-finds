@@ -25,8 +25,19 @@ def get_engine() -> Engine:
     return build_engine(get_settings().database_url)
 
 
+def make_session_factory(engine: Engine) -> sessionmaker:
+    """The one place that decides how sessions behave. Tests use it too, on purpose.
+
+    `expire_on_commit=False` keeps objects readable after a commit, so a response can be built
+    from them without another query. The catch: objects are then NOT refreshed after a commit,
+    so code must keep in-memory relationships in sync itself (append to `product.images`,
+    don't just insert a row that points at the product). Sessions with the default setting
+    hide that class of bug, which is why the tests build their sessions through this function.
+    """
+    return sessionmaker(bind=engine, expire_on_commit=False)
+
+
 def get_session() -> Iterator[Session]:
     """FastAPI dependency: one session per request, always closed afterwards."""
-    factory = sessionmaker(bind=get_engine(), expire_on_commit=False)
-    with factory() as session:
+    with make_session_factory(get_engine())() as session:
         yield session

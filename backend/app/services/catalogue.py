@@ -4,6 +4,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.core.errors import NotFound
+from app.integrations.storage import delete_quietly
 from app.models.product import Product, ProductVariant
 from app.repositories import products as repo
 from app.schemas.product import ProductCreate, ProductUpdate, VariantIn
@@ -70,7 +71,15 @@ def replace_variants(
     return product
 
 
-def delete_product(session: Session, product_id: uuid.UUID) -> None:
+def delete_product(session: Session, product_id: uuid.UUID, storage=None) -> None:
+    """Delete a product; its variant and image rows go with it (database cascade).
+
+    When a storage adapter is given, the product's stored photos are removed afterwards on a
+    best-effort basis: the product is already gone, so a storage failure is only logged.
+    """
     product = get_product(session, product_id, include_inactive=True)
+    paths = [image.path for image in product.images]
     repo.delete(session, product)
     session.commit()
+    if storage is not None:
+        delete_quietly(storage, paths)

@@ -3,11 +3,11 @@ import uuid
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.errors import NotFound
 from app.db.base import Base
+from app.db.session import make_session_factory
 from app.schemas.product import ProductCreate, ProductUpdate, VariantIn
 from app.services import catalogue
 
@@ -18,7 +18,7 @@ def session():
         "sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False}
     )
     Base.metadata.create_all(engine)
-    with Session(engine) as s:
+    with make_session_factory(engine)() as s:
         yield s
 
 

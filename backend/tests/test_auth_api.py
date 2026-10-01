@@ -3,13 +3,12 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import Settings, get_settings
 from app.core.errors import Unauthorized
 from app.db.base import Base
-from app.db.session import get_session
+from app.db.session import get_session, make_session_factory
 from app.integrations.google import GoogleProfile
 from app.routers.auth import get_google_client
 
@@ -47,7 +46,7 @@ def web(app):
     Base.metadata.create_all(engine)
 
     def override_session():
-        with Session(engine) as s:
+        with make_session_factory(engine)() as s:
             yield s
 
     app.dependency_overrides[get_session] = override_session

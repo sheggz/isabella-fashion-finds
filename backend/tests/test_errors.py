@@ -24,6 +24,21 @@ def test_conflict_maps_to_409(client):
     assert error_of(res)["code"] == "conflict"
 
 
+def test_unique_violation_is_a_409_and_leaks_no_constraint_details(client):
+    res = client.get("/_t/unique")
+    assert res.status_code == 409
+    assert error_of(res)["code"] == "conflict"
+    assert "products.name" not in res.text
+
+
+def test_other_integrity_errors_are_still_server_errors(client):
+    # A CHECK failure means our validation missed something: that is a bug, not a user conflict.
+    res = client.get("/_t/check")
+    assert res.status_code == 500
+    assert error_of(res)["code"] == "internal_error"
+    assert "ck_price" not in res.text
+
+
 def test_unknown_route_uses_the_same_shape(client):
     res = client.get("/does-not-exist")
     assert res.status_code == 404

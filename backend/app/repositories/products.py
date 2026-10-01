@@ -15,14 +15,16 @@ def add(session: Session, product: Product) -> Product:
 
 def get(session: Session, product_id: uuid.UUID) -> Product | None:
     return session.scalar(
-        select(Product).where(Product.id == product_id).options(selectinload(Product.variants))
+        select(Product)
+        .where(Product.id == product_id)
+        .options(selectinload(Product.variants), selectinload(Product.images))
     )
 
 
 def list_all(
     session: Session, *, include_inactive: bool, limit: int, offset: int
 ) -> list[Product]:
-    query = select(Product).options(selectinload(Product.variants))
+    query = select(Product).options(selectinload(Product.variants), selectinload(Product.images))
     if not include_inactive:
         query = query.where(Product.is_active.is_(True))
     query = query.order_by(Product.created_at.desc(), Product.name).limit(limit).offset(offset)

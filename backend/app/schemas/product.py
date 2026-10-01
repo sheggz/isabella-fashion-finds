@@ -3,8 +3,10 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, computed_field, field_validator
 
+from app.core.config import get_settings
+from app.domain.images import public_url
 from app.domain.sizing import normalize_size, validate_measurements
 
 
@@ -100,6 +102,24 @@ class VariantOut(BaseModel):
     measurements: dict[str, float]
 
 
+class ImageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    position: int
+    path: str = Field(exclude=True)  # internal storage path: needed to build the URL, never sent
+
+    @computed_field
+    @property
+    def url(self) -> str:
+        settings = get_settings()
+        return public_url(settings.supabase_url, settings.storage_bucket, self.path)
+
+
+class ReorderIn(BaseModel):
+    image_ids: list[uuid.UUID]
+
+
 class ProductOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -110,3 +130,4 @@ class ProductOut(BaseModel):
     is_active: bool
     created_at: datetime
     variants: list[VariantOut]
+    images: list[ImageOut]

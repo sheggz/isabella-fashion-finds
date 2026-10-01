@@ -3,16 +3,14 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response, status
-from sqlalchemy.orm import Session
 
 from app.core.security import require_owner
-from app.db.session import get_session
+from app.routers.deps import DbSession, StorageDep
 from app.schemas.product import ProductCreate, ProductOut, ProductUpdate, VariantList
 from app.services import catalogue
 
 router = APIRouter(prefix="/products", tags=["products"])
 
-DbSession = Annotated[Session, Depends(get_session)]
 OwnerOnly = [Depends(require_owner)]
 
 
@@ -46,6 +44,6 @@ def replace_variants(product_id: uuid.UUID, variants: VariantList, session: DbSe
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=OwnerOnly)
-def delete_product(product_id: uuid.UUID, session: DbSession):
-    catalogue.delete_product(session, product_id)
+def delete_product(product_id: uuid.UUID, session: DbSession, storage: StorageDep):
+    catalogue.delete_product(session, product_id, storage=storage)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

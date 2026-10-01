@@ -45,6 +45,16 @@ class Forbidden(AppError):
     code = "forbidden"
 
 
+class PayloadTooLarge(AppError):
+    status_code = 413
+    code = "file_too_large"
+
+
+class UnsupportedMediaType(AppError):
+    status_code = 415
+    code = "unsupported_media_type"
+
+
 class ServiceUnavailable(AppError):
     """A dependency we need (database, payment provider...) is down or not configured."""
 

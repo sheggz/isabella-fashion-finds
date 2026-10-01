@@ -1,9 +1,9 @@
 import pytest
 from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
+from app.db.session import make_session_factory
 from app.integrations.google import GoogleProfile
 from app.models.user import User
 from app.services import auth
@@ -15,7 +15,7 @@ def session():
         "sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False}
     )
     Base.metadata.create_all(engine)
-    with Session(engine) as s:
+    with make_session_factory(engine)() as s:
         yield s
 
 
