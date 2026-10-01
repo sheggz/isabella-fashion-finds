@@ -1,12 +1,21 @@
 """Request/response shapes. Validation happens here, at the HTTP boundary."""
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from app.core.config import get_settings
 from app.domain.images import public_url
+from app.domain.pricing import check_prices
 from app.domain.sizing import normalize_size, validate_measurements
 
 
@@ -21,6 +30,7 @@ def _clean_optional(value: str | None) -> str | None:
 class VariantIn(BaseModel):
     size: str
     stock: int = Field(ge=0)
+    price_kobo: int | None = Field(default=None, ge=0)  # only for pieces priced per size
     measurements: dict[str, float] = Field(default_factory=dict)  # centimetres, optional
 
     @field_validator("size", mode="before")
@@ -52,9 +62,17 @@ VariantList = Annotated[
 class ProductCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=5000)  # optional
-    price_kobo: int = Field(ge=0)
+    pricing_mode: Literal["single", "per_size"] = "single"
+    price_kobo: int | None = Field(default=None, ge=0)  # the one price, in "single" mode only
     is_active: bool = True
     variants: VariantList
+
+    @model_validator(mode="after")
+    def prices_match_the_mode(self):
+        # Needs the whole object (mode, piece price and every size price), so it runs after the
+        # fields are validated. ValueError becomes a normal 422 for the owner.
+        check_prices(self.pricing_mode, self.price_kobo, [v.price_kobo for v in self.variants])
+        return self
 
     @field_validator("name")
     @classmethod
@@ -100,6 +118,7 @@ class VariantOut(BaseModel):
     size: str
     stock: int
     measurements: dict[str, float]
+    price_kobo: int  # this size's undiscounted price (the shared price in "single" mode)
 
 
 class ImageOut(BaseModel):
@@ -126,7 +145,9 @@ class ProductOut(BaseModel):
     id: uuid.UUID
     name: str
     description: str | None
-    price_kobo: int
+    pricing_mode: str
+    price_kobo: int | None  # the "from" price: the cheapest size's undiscounted price
+    price_varies: bool  # True when sizes cost different amounts ("from" should be shown)
     is_active: bool
     created_at: datetime
     variants: list[VariantOut]

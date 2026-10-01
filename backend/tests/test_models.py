@@ -56,6 +56,44 @@ def test_negative_stock_is_rejected(session):
         session.commit()
 
 
+def test_a_piece_priced_per_size_has_no_piece_price_and_each_size_has_its_own(session):
+    p = make_product(pricing_mode="per_size", price_kobo=None)
+    p.variants = [ProductVariant(size="S", stock=1, price_kobo=1000), ProductVariant(size="M", stock=1, price_kobo=1200)]
+    session.add(p)
+    session.commit()
+    prices = {v.size: v.price_kobo for v in session.scalars(select(Product)).one().variants}
+    assert prices == {"S": 1000, "M": 1200}
+
+
+def test_one_price_mode_defaults_in_and_requires_the_piece_price(session):
+    session.add(make_product())
+    session.commit()
+    assert session.scalars(select(Product)).one().pricing_mode == "single"
+    session.add(make_product(price_kobo=None))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_per_size_mode_must_not_also_carry_a_piece_price(session):
+    session.add(make_product(pricing_mode="per_size", price_kobo=1000))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_an_unknown_pricing_mode_is_rejected_by_the_database(session):
+    session.add(make_product(pricing_mode="tiered"))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_a_negative_size_price_is_rejected_by_the_database(session):
+    p = make_product(pricing_mode="per_size", price_kobo=None)
+    p.variants = [ProductVariant(size="S", stock=1, price_kobo=-1)]
+    session.add(p)
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
 def test_a_size_outside_the_fixed_list_is_rejected_by_the_database(session):
     p = make_product()
     p.variants = [ProductVariant(size="HUGE", stock=1)]

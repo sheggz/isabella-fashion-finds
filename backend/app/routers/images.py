@@ -8,6 +8,7 @@ from app.domain.images import MAX_IMAGE_BYTES
 from app.routers.deps import DbSession, StorageDep
 from app.schemas.product import ProductOut, ReorderIn
 from app.services import catalogue, images
+from app.services.presentation import present_one
 
 router = APIRouter(prefix="/products", tags=["images"], dependencies=[Depends(require_owner)])
 
@@ -24,14 +25,14 @@ def upload_image(product_id: uuid.UUID, file: UploadFile, session: DbSession, st
     """
     data = file.file.read(MAX_IMAGE_BYTES + 1)
     images.add_image(session, storage, product_id, data)
-    return catalogue.get_product(session, product_id, include_inactive=True)
+    return present_one(session, catalogue.get_product(session, product_id, include_inactive=True))
 
 
 @router.put("/{product_id}/images/order", response_model=ProductOut)
 def reorder_images(product_id: uuid.UUID, body: ReorderIn, session: DbSession):
-    return images.reorder_images(session, product_id, body.image_ids)
+    return present_one(session, images.reorder_images(session, product_id, body.image_ids))
 
 
 @router.delete("/{product_id}/images/{image_id}", response_model=ProductOut)
 def delete_image(product_id: uuid.UUID, image_id: uuid.UUID, session: DbSession, storage: StorageDep):
-    return images.delete_image(session, storage, product_id, image_id)
+    return present_one(session, images.delete_image(session, storage, product_id, image_id))
