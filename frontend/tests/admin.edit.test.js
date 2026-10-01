@@ -4,8 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../src/api/admin.js', () => ({
   getAdminProduct: vi.fn(),
   createProduct: vi.fn(),
-  updateProduct: vi.fn(),
-  replaceVariants: vi.fn(),
+  saveProduct: vi.fn(),
   deleteProduct: vi.fn(),
   uploadImage: vi.fn(),
   deleteImage: vi.fn(),
@@ -37,10 +36,12 @@ const saved = (over = {}) => ({
   id: 'p1',
   name: 'Ankara Dress',
   description: 'Hand-sewn',
+  pricing_mode: 'single',
   price_kobo: 1500000,
+  price_varies: false,
   is_active: true,
   images: [photo('i1', 0), photo('i2', 1)],
-  variants: [{ size: 'M', stock: 2, measurements: { bust: 92 } }],
+  variants: [{ size: 'M', stock: 2, price_kobo: 1500000, measurements: { bust: 92 } }],
   ...over,
 });
 
@@ -120,6 +121,7 @@ describe('new piece', () => {
     expect(admin.createProduct).toHaveBeenCalledWith({
       name: 'Ankara Dress',
       description: null,
+      pricing_mode: 'single',
       price_kobo: 1500000,
       is_active: true,
       variants: [{ size: 'M', stock: 3, measurements: { bust: 92 } }],
@@ -168,19 +170,32 @@ describe('edit piece', () => {
     expect(field('size-S-enabled').checked).toBe(false);
   });
 
-  it('saves details and sizes, then confirms', async () => {
-    admin.updateProduct.mockResolvedValue(saved());
-    admin.replaceVariants.mockResolvedValue(saved({ price_kobo: 1600000 }));
+  it('saves the whole piece in ONE request, then confirms', async () => {
+    admin.saveProduct.mockResolvedValue(saved({ price_kobo: 1600000 }));
     await openEdit();
     type('price', '16000');
     tick('isActive', false);
     submit();
 
-    await vi.waitFor(() => expect(admin.updateProduct).toHaveBeenCalledWith('p1', {
-      name: 'Ankara Dress', description: 'Hand-sewn', price_kobo: 1600000, is_active: false,
-    }));
-    expect(admin.replaceVariants).toHaveBeenCalledWith('p1', [{ size: 'M', stock: 2, measurements: { bust: 92 } }]);
+    await vi.waitFor(() => expect(admin.saveProduct).toHaveBeenCalledTimes(1));
+    expect(admin.saveProduct).toHaveBeenCalledWith('p1', {
+      name: 'Ankara Dress',
+      description: 'Hand-sewn',
+      pricing_mode: 'single',
+      price_kobo: 1600000,
+      is_active: false,
+      variants: [{ size: 'M', stock: 2, measurements: { bust: 92 } }],
+    });
     await vi.waitFor(() => expect(view.querySelector('[role="status"]').textContent).toContain('Saved'));
+  });
+
+  it('shows the server message when saving fails and keeps what was typed', async () => {
+    admin.saveProduct.mockRejectedValue({ status: 503, code: 'service_unavailable', message: 'Database is unavailable' });
+    await openEdit();
+    type('name', 'Renamed');
+    submit();
+    await vi.waitFor(() => expect(view.querySelector('.form-alert').textContent).toContain('Database is unavailable'));
+    expect(field('name').value).toBe('Renamed');
   });
 
   it('deletes the whole piece after confirmation and returns to the list', async () => {
@@ -273,5 +288,95 @@ describe('photos', () => {
     await openEdit(saved({ images: [photo('i1', 0), photo('i2', 1), photo('i3', 2)] }));
     expect(field('photo').disabled).toBe(true);
     expect(view.querySelector('.photos').textContent).toContain('3 of 3');
+  });
+});
+
+
+describe('pricing: one price or a price per size', () => {
+  const mode = (value) => {
+    const radio = view.querySelector(`input[name="pricingMode"][value="${value}"]`);
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  const perSizePiece = () => saved({
+    pricing_mode: 'per_size',
+    price_kobo: 1200000,
+    price_varies: true,
+    variants: [
+      { size: 'S', stock: 1, price_kobo: 1500000, measurements: {} },
+      { size: 'M', stock: 2, price_kobo: 1200000, measurements: {} },
+    ],
+  });
+
+  it('starts as one price for every size, with the size price boxes hidden', async () => {
+    await openNew();
+    expect(view.querySelector('input[name="pricingMode"][value="single"]').checked).toBe(true);
+    expect(field('price').closest('.single-price').hidden).toBe(false);
+    tick('size-M-enabled');
+    expect(field('size-M-price').closest('.size-price').hidden).toBe(true);
+  });
+
+  it('switching to a price per size shows a price box on each size and hides the single price', async () => {
+    await openNew();
+    mode('per_size');
+    expect(field('price').closest('.single-price').hidden).toBe(true);
+    expect(field('size-M-price').closest('.size-price').hidden).toBe(false);
+    mode('single');
+    expect(field('price').closest('.single-price').hidden).toBe(false);
+  });
+
+  it('creates a per-size piece with a price on each size and no piece price', async () => {
+    admin.createProduct.mockResolvedValue({ id: 'new-2' });
+    await openNew();
+    type('name', 'Gown');
+    mode('per_size');
+    tick('size-S-enabled'); type('size-S-stock', '1'); type('size-S-price', '15,000');
+    tick('size-M-enabled'); type('size-M-stock', '2'); type('size-M-price', '12000');
+    submit();
+    await vi.waitFor(() => expect(admin.createProduct).toHaveBeenCalledTimes(1));
+    expect(admin.createProduct).toHaveBeenCalledWith({
+      name: 'Gown',
+      description: null,
+      pricing_mode: 'per_size',
+      price_kobo: null,
+      is_active: true,
+      variants: [
+        { size: 'S', stock: 1, price_kobo: 1500000, measurements: {} },
+        { size: 'M', stock: 2, price_kobo: 1200000, measurements: {} },
+      ],
+    });
+  });
+
+  it('asks for a price on each enabled size and does not send anything until fixed', async () => {
+    await openNew();
+    type('name', 'Gown');
+    mode('per_size');
+    tick('size-M-enabled'); type('size-M-stock', '2');
+    submit();
+    expect(errorOf('size.M.price').textContent).toMatch(/price/i);
+    expect(errorOf('price').hidden).toBe(true); // the single price is not in use, so no error for it
+    expect(admin.createProduct).not.toHaveBeenCalled();
+  });
+
+  it('opens a per-size piece in per-size mode with every price filled in', async () => {
+    await openEdit(perSizePiece());
+    expect(view.querySelector('input[name="pricingMode"][value="per_size"]').checked).toBe(true);
+    expect(field('size-S-price').value).toBe('15000');
+    expect(field('size-M-price').value).toBe('12000');
+    expect(field('size-M-price').closest('.size-price').hidden).toBe(false);
+  });
+
+  it('converts a one-price piece to per-size in one save', async () => {
+    admin.saveProduct.mockResolvedValue(perSizePiece());
+    await openEdit();
+    mode('per_size');
+    type('size-M-price', '12000');
+    submit();
+    await vi.waitFor(() => expect(admin.saveProduct).toHaveBeenCalledTimes(1));
+    expect(admin.saveProduct.mock.calls[0][1]).toMatchObject({
+      pricing_mode: 'per_size',
+      price_kobo: null,
+      variants: [{ size: 'M', stock: 2, price_kobo: 1200000, measurements: { bust: 92 } }],
+    });
   });
 });

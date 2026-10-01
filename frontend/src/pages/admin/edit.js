@@ -1,6 +1,6 @@
 import {
   createProduct, deleteImage, deleteProduct, getAdminProduct,
-  reorderImages, replaceVariants, updateProduct, uploadImage,
+  reorderImages, saveProduct, uploadImage,
 } from '../../api/admin.js';
 import { getCatalogueOptions } from '../../api/catalogue.js';
 import { el, link } from '../../components/dom.js';
@@ -32,26 +32,51 @@ const buildForm = (options, values) => {
       el('input', { type: 'text', inputMode: 'numeric', name: `size-${size}-stock`, value: state.stock }),
       `size.${size}.stock`,
     );
+    // Only shown when the piece is priced per size (see applyMode below).
+    const price = el(
+      'div',
+      { className: 'size-price', hidden: values.pricingMode !== 'per_size' },
+      field(
+        'Price (₦)',
+        el('input', { type: 'text', inputMode: 'decimal', name: `size-${size}-price`, value: state.price }),
+        `size.${size}.price`,
+      ),
+    );
     const measures = options.measurement_parts.map((part) =>
       field(
         `${part.label} (${options.unit})`,
         el('input', { type: 'text', inputMode: 'decimal', name: `size-${size}-${part.value}`, value: state.measurements[part.value] ?? '' }),
         `size.${size}.${part.value}`,
       ));
-    const fields = el('div', { className: 'size-fields', hidden: !state.enabled }, stock, ...measures);
+    const fields = el('div', { className: 'size-fields', hidden: !state.enabled }, stock, price, ...measures);
     enabled.addEventListener('change', () => { fields.hidden = !enabled.checked; });
 
     return el('div', { className: 'size-row' }, el('label', { className: 'size-toggle' }, enabled, ` ${label}`), fields);
   };
 
-  return el(
+  const modeRadio = (value, label) =>
+    el('label', { className: 'check' }, el('input', { type: 'radio', name: 'pricingMode', value, checked: values.pricingMode === value }), ` ${label}`);
+  const singlePrice = el(
+    'div',
+    { className: 'single-price', hidden: values.pricingMode === 'per_size' },
+    field('Price (₦)', el('input', { type: 'text', inputMode: 'decimal', name: 'price', value: values.price }), 'price'),
+  );
+
+  const form = el(
     'form',
     { className: 'product-form', noValidate: true },
     el('div', { className: 'form-alert', hidden: true, attrs: { role: 'alert' } }),
     field('Name', el('input', { type: 'text', name: 'name', value: values.name, maxLength: 200 }), 'name'),
     field('Description (optional)', el('textarea', { name: 'description', value: values.description, rows: 4 }), 'description',
       'Tell customers about the piece: fabric, fit, care.'),
-    field('Price (₦)', el('input', { type: 'text', inputMode: 'decimal', name: 'price', value: values.price }), 'price'),
+    el(
+      'fieldset',
+      { className: 'pricing-mode' },
+      el('legend', { textContent: 'Pricing' }),
+      modeRadio('single', 'One price for every size'),
+      modeRadio('per_size', 'A different price for each size'),
+    ),
+    singlePrice,
     el('label', { className: 'check' }, el('input', { type: 'checkbox', name: 'isActive', checked: values.isActive }), ' Visible in the shop'),
     el(
       'fieldset',
@@ -64,6 +89,15 @@ const buildForm = (options, values) => {
     el('button', { type: 'submit', className: 'button primary', textContent: 'Save piece' }),
     el('p', { className: 'save-status', attrs: { role: 'status' } }),
   );
+
+  // Show the price box that is in use: the single price, or one price on each size.
+  const applyMode = () => {
+    const perSize = form.querySelector('input[name="pricingMode"]:checked')?.value === 'per_size';
+    singlePrice.hidden = perSize;
+    form.querySelectorAll('.size-price').forEach((box) => { box.hidden = !perSize; });
+  };
+  form.querySelectorAll('input[name="pricingMode"]').forEach((radio) => radio.addEventListener('change', applyMode));
+  return form;
 };
 
 /** Read what the owner typed straight from the inputs (plain text, as the pure validator expects). */
@@ -72,11 +106,13 @@ const readForm = (form, options) => {
   return {
     name: q('name').value,
     description: q('description').value,
+    pricingMode: form.querySelector('input[name="pricingMode"]:checked')?.value ?? 'single',
     price: q('price').value,
     isActive: q('isActive').checked,
     sizes: Object.fromEntries(options.sizes.map(({ value: size }) => [size, {
       enabled: q(`size-${size}-enabled`).checked,
       stock: q(`size-${size}-stock`).value,
+      price: q(`size-${size}-price`).value,
       measurements: Object.fromEntries(options.measurement_parts.map(({ value: part }) => [part, q(`size-${size}-${part}`).value])),
     }])),
   };
@@ -216,12 +252,13 @@ export const renderAdminEdit = (view, { params, navigate }) => {
       setSaving(true);
       try {
         if (isNew) {
-          const created = await createProduct({ ...result.value.product, variants: result.value.variants });
+          const created = await createProduct(result.value);
           navigate(`/admin/products/${created.id}`); // photos can only be added once the piece exists
           return;
         }
-        await updateProduct(productId, result.value.product);
-        product = await replaceVariants(productId, result.value.variants);
+        // One request saves details, pricing and sizes together, so a failure can never leave
+        // the piece half-updated (for example "per size" pricing with no size prices yet).
+        product = await saveProduct(productId, result.value);
         status.textContent = 'Saved ✓';
       } catch (error) {
         showAlert(form, error);

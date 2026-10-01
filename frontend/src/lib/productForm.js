@@ -4,12 +4,13 @@ import { koboToInput, nairaToKobo } from './money.js';
 
 const MAX_MEASUREMENT = 300;
 
-const blankSize = () => ({ enabled: false, stock: '', measurements: {} });
+const blankSize = () => ({ enabled: false, stock: '', price: '', measurements: {} });
 
-/** A fresh form: visible in the shop, every size switched off. */
+/** A fresh form: visible in the shop, one price for every size, every size switched off. */
 export const emptyForm = (options) => ({
   name: '',
   description: '',
+  pricingMode: 'single',
   price: '',
   isActive: true,
   sizes: Object.fromEntries(options.sizes.map((s) => [s.value, blankSize()])),
@@ -18,14 +19,17 @@ export const emptyForm = (options) => ({
 /** Fill the form from a saved product. Gives one row per fixed size so any can be switched on. */
 export const productToForm = (product, options) => {
   const form = emptyForm(options);
+  const perSize = product.pricing_mode === 'per_size';
   form.name = product.name;
   form.description = product.description ?? '';
-  form.price = koboToInput(product.price_kobo);
+  form.pricingMode = perSize ? 'per_size' : 'single';
+  form.price = perSize ? '' : koboToInput(product.price_kobo);
   form.isActive = product.is_active;
   for (const variant of product.variants ?? []) {
     form.sizes[variant.size] = {
       enabled: true,
       stock: String(variant.stock),
+      price: perSize ? koboToInput(variant.price_kobo) : '',
       measurements: Object.fromEntries(Object.entries(variant.measurements ?? {}).map(([k, v]) => [k, String(v)])),
     };
   }
@@ -33,33 +37,45 @@ export const productToForm = (product, options) => {
 };
 
 /**
- * Validate the form and build the API payload.
+ * Validate the form and build the API payload (the same shape for create and for "save piece").
  *
- * Returns `{ ok: true, value: { product, variants } }` or `{ ok: false, errors }`, where
- * `errors` maps a field key (`name`, `price`, `sizes`, `size.M.stock`, `size.M.bust`) to a
- * message. ALL problems are collected so the owner can fix them in one go.
+ * Returns `{ ok: true, value }` or `{ ok: false, errors }`, where `errors` maps a field key
+ * (`name`, `price`, `sizes`, `size.M.stock`, `size.M.price`, `size.M.bust`) to a message. ALL
+ * problems are collected so the owner can fix them in one go.
  *
- * Only sizes that are switched on are looked at, so leftover text in a switched-off size
- * cannot block saving. Sizes are emitted in the store's order, not the order of the form.
- * The server validates again; this exists for instant, specific feedback.
+ * Pricing: in "single" mode only the piece price is read and size prices are ignored; in
+ * "per_size" mode only the size prices are read and the piece price is sent as null. Whatever
+ * is typed in the box that is not in use can therefore never block saving or leak into the
+ * payload. Only sizes that are switched on are looked at, and sizes are emitted in the store's
+ * order. The server validates again; this exists for instant, specific feedback.
  */
 export const formToPayload = (form, options) => {
   const errors = {};
+  const perSize = form.pricingMode === 'per_size';
 
   const name = form.name.trim();
   if (!name) errors.name = 'Give the piece a name.';
   else if (name.length > 200) errors.name = 'The name is too long (200 characters at most).';
 
-  const priceKobo = nairaToKobo(form.price);
-  if (priceKobo === null) errors.price = 'Enter a valid price, like 15000 or 15,000.50.';
+  let pieceKobo = null;
+  if (!perSize) {
+    pieceKobo = nairaToKobo(form.price);
+    if (pieceKobo === null) errors.price = 'Enter a valid price, like 15000 or 15,000.50.';
+  }
 
   const variants = [];
-  for (const { value: size } of options.sizes) {
+  for (const { value: size, label } of options.sizes) {
     const row = form.sizes[size];
     if (!row?.enabled) continue;
 
     const stockText = String(row.stock).trim();
     if (!/^\d+$/.test(stockText)) errors[`size.${size}.stock`] = 'Stock must be a whole number, 0 or more.';
+
+    let sizeKobo = null;
+    if (perSize) {
+      sizeKobo = nairaToKobo(row.price ?? '');
+      if (sizeKobo === null) errors[`size.${size}.price`] = `Enter a valid price for ${label}, like 15000 or 15,000.50.`;
+    }
 
     const measurements = {};
     for (const part of options.measurement_parts) {
@@ -72,7 +88,7 @@ export const formToPayload = (form, options) => {
         measurements[part.value] = number;
       }
     }
-    variants.push({ size, stock: Number(stockText), measurements });
+    variants.push({ size, stock: Number(stockText), ...(perSize ? { price_kobo: sizeKobo } : {}), measurements });
   }
   if (variants.length === 0) errors.sizes = 'Offer at least one size.';
 
@@ -81,7 +97,11 @@ export const formToPayload = (form, options) => {
   return {
     ok: true,
     value: {
-      product: { name, description: form.description.trim() || null, price_kobo: priceKobo, is_active: form.isActive },
+      name,
+      description: form.description.trim() || null,
+      pricing_mode: perSize ? 'per_size' : 'single',
+      price_kobo: perSize ? null : pieceKobo,
+      is_active: form.isActive,
       variants,
     },
   };

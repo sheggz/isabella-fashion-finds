@@ -30,15 +30,19 @@ const product = (over = {}) => ({
   id: 'p1',
   name: 'Ankara Dress',
   description: 'Hand-sewn in Lagos.',
+  pricing_mode: 'single',
   price_kobo: 1500000,
+  price_varies: false,
+  sale_price_kobo: null,
+  discount: null,
   images: [
     { id: 'i2', position: 1, url: 'https://cdn.test/b.png' },
     { id: 'i1', position: 0, url: 'https://cdn.test/a.png' },
   ],
   variants: [
-    { size: 'S', stock: 0, measurements: { bust: 88 } },
-    { size: 'M', stock: 2, measurements: { bust: 92, waist: 74.3 } },
-    { size: 'ONE_SIZE', stock: 5, measurements: {} },
+    { size: 'S', stock: 0, price_kobo: 1500000, sale_price_kobo: null, measurements: { bust: 88 } },
+    { size: 'M', stock: 2, price_kobo: 1500000, sale_price_kobo: null, measurements: { bust: 92, waist: 74.3 } },
+    { size: 'ONE_SIZE', stock: 5, price_kobo: 1500000, sale_price_kobo: null, measurements: {} },
   ],
   ...over,
 });
@@ -146,5 +150,74 @@ describe('product page', () => {
     expect(view.querySelector('h1 b')).toBeNull();
     expect(view.querySelector('script')).toBeNull();
     expect(view.querySelector('h1').textContent).toBe('<b onclick="x()">Bold</b>');
+  });
+});
+
+
+describe('product page prices', () => {
+  const perSize = (over = {}) => product({
+    pricing_mode: 'per_size',
+    price_kobo: 1200000,
+    price_varies: true,
+    variants: [
+      { size: 'S', stock: 1, price_kobo: 1500000, sale_price_kobo: null, measurements: {} },
+      { size: 'M', stock: 2, price_kobo: 1200000, sale_price_kobo: null, measurements: {} },
+    ],
+    ...over,
+  });
+
+  it('shows the price of the size that is selected, and updates it when another size is chosen', async () => {
+    await open(perSize());
+    expect(view.querySelector('.price-block').textContent).toContain('₦15,000'); // S is the first in stock
+    view.querySelector('button.size[data-size="M"]').click();
+    expect(view.querySelector('.price-block').textContent).toContain('₦12,000');
+    expect(view.querySelector('.price-block').textContent).not.toContain('₦15,000');
+  });
+
+  it('shows "From" while no size can be chosen (everything sold out)', async () => {
+    const soldOut = perSize({
+      variants: [
+        { size: 'S', stock: 0, price_kobo: 1500000, sale_price_kobo: null, measurements: {} },
+        { size: 'M', stock: 0, price_kobo: 1200000, sale_price_kobo: null, measurements: {} },
+      ],
+    });
+    await open(soldOut);
+    expect(view.querySelector('.price-block').textContent).toContain('From ₦12,000');
+  });
+
+  it('during a sale shows the original struck through, the sale price, the percentage and when it ends', async () => {
+    const onSale = product({
+      sale_price_kobo: 1350000,
+      discount: { name: 'Weekend sale', ends_at: '2030-01-01T12:00:00Z' },
+      variants: [{ size: 'M', stock: 2, price_kobo: 1500000, sale_price_kobo: 1350000, measurements: {} }],
+    });
+    await open(onSale);
+    const block = view.querySelector('.price-block');
+    expect(block.querySelector('s.was').textContent).toBe('₦15,000');
+    expect(block.querySelector('.now').textContent).toBe('₦13,500');
+    expect(block.querySelector('.badge.sale').textContent).toBe('-10%');
+    expect(view.querySelector('.discount-note').textContent).toMatch(/^Weekend sale · ends 1 Jan 2030, /);
+  });
+
+  it('discounts each size from its own price', async () => {
+    const onSale = perSize({
+      sale_price_kobo: 1080000,
+      discount: { name: 'Sale', ends_at: '2030-01-01T12:00:00Z' },
+      variants: [
+        { size: 'S', stock: 1, price_kobo: 1500000, sale_price_kobo: 1350000, measurements: {} },
+        { size: 'M', stock: 2, price_kobo: 1200000, sale_price_kobo: 1080000, measurements: {} },
+      ],
+    });
+    await open(onSale);
+    expect(view.querySelector('.price-block .now').textContent).toBe('₦13,500');
+    view.querySelector('button.size[data-size="M"]').click();
+    expect(view.querySelector('.price-block .now').textContent).toBe('₦10,800');
+    expect(view.querySelector('.price-block s.was').textContent).toBe('₦12,000');
+  });
+
+  it('shows no sale markup and no note without a discount', async () => {
+    await open();
+    expect(view.querySelector('.price-block s.was')).toBeNull();
+    expect(view.querySelector('.discount-note')).toBeNull();
   });
 });

@@ -119,3 +119,16 @@ button.danger { color: var(--danger); border-color: var(--danger); background: t
 .photo-list li { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; display: grid; gap: 6px; justify-items: start; }
 .photo-list img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; }
 .danger-zone { margin-top: 32px; }
+
+
+/* prices and sales */
+.price .was { color: var(--muted); font-weight: 400; margin-right: 4px; }
+.price .now { font-weight: 700; }
+.price.big { font-size: 1.5rem; margin: 4px 0; }
+.price-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.badge.sale { background: var(--accent); color: var(--accent-text); }
+.photo .badge.sale { left: auto; right: 10px; }
+.discount-note { color: var(--accent); font-weight: 600; margin: 2px 0 8px; }
+
+/* pricing controls in the owner's form */
+.pricing-mode { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; display: grid; gap: 6px; }

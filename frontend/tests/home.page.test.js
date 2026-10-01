@@ -12,7 +12,11 @@ import { renderHome } from '../src/pages/home.js';
 const product = (over = {}) => ({
   id: 'p1',
   name: 'Ankara Dress',
+  pricing_mode: 'single',
   price_kobo: 1500000,
+  price_varies: false,
+  sale_price_kobo: null,
+  discount: null,
   images: [{ id: 'i1', position: 0, url: 'https://cdn.test/a.png' }],
   variants: [{ size: 'M', stock: 2, measurements: {} }],
   ...over,
@@ -87,5 +91,42 @@ describe('home page', () => {
     await settle();
     expect(view.querySelectorAll('img[src="x"]')).toHaveLength(0);
     expect(view.querySelector('a.card').textContent).toContain('<img src=x onerror="window.pwned=1">');
+  });
+});
+
+
+describe('home page prices', () => {
+  const settleCards = () => vi.waitFor(() => expect(view.querySelector('a.card')).not.toBeNull());
+
+  it('shows "From" when sizes cost different amounts', async () => {
+    listProducts.mockResolvedValue([product({ pricing_mode: 'per_size', price_kobo: 1200000, price_varies: true })]);
+    renderHome(view, {});
+    await settleCards();
+    expect(view.querySelector('a.card .price').textContent).toBe('From ₦12,000');
+  });
+
+  it('during a sale shows the old price struck through, the new price and the percentage off', async () => {
+    listProducts.mockResolvedValue([product({ sale_price_kobo: 1350000, discount: { name: 'Weekend sale', ends_at: '2030-01-01T00:00:00Z' } })]);
+    renderHome(view, {});
+    await settleCards();
+    const card = view.querySelector('a.card');
+    expect(card.querySelector('s.was').textContent).toBe('₦15,000');
+    expect(card.querySelector('.now').textContent).toBe('₦13,500');
+    expect(card.querySelector('.badge.sale').textContent).toBe('-10%');
+  });
+
+  it('shows no sale markup when nothing is discounted', async () => {
+    listProducts.mockResolvedValue([product()]);
+    renderHome(view, {});
+    await settleCards();
+    expect(view.querySelector('s.was')).toBeNull();
+    expect(view.querySelector('.badge.sale')).toBeNull();
+  });
+
+  it('keeps showing "Sold out" for a sold-out piece even during a sale', async () => {
+    listProducts.mockResolvedValue([product({ sale_price_kobo: 1350000, variants: [{ size: 'M', stock: 0, price_kobo: 1500000, sale_price_kobo: 1350000, measurements: {} }] })]);
+    renderHome(view, {});
+    await settleCards();
+    expect(view.querySelector('a.card').textContent).toContain('Sold out');
   });
 });

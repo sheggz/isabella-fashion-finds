@@ -42,9 +42,11 @@ describe('header', () => {
   it('shows the manage link only to the owner', () => {
     renderHeader(host, { status: 'ready', user: { name: 'Isa', role: 'owner' } }, {});
     expect(host.querySelector('a[href="/admin"]')).not.toBeNull();
+    expect(host.querySelector('a[href="/admin/discounts"]')).not.toBeNull();
 
     renderHeader(host, { status: 'ready', user: { name: 'Ada', role: 'customer' } }, {});
     expect(host.querySelector('a[href="/admin"]')).toBeNull();
+    expect(host.querySelector('a[href="/admin/discounts"]')).toBeNull();
   });
 
   it('shows neither sign-in nor sign-out while the session is still loading', () => {

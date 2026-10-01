@@ -3,19 +3,19 @@ import { api } from './client.js';
 
 const id = encodeURIComponent;
 
+// ---- pieces
 export const listAdminProducts = () => api('/admin/products');
 
 export const getAdminProduct = (productId) => api(`/admin/products/${id(productId)}`);
 
 export const createProduct = (body) => api('/products', { method: 'POST', json: body });
 
-export const updateProduct = (productId, patch) => api(`/products/${id(productId)}`, { method: 'PATCH', json: patch });
-
-export const replaceVariants = (productId, variants) =>
-  api(`/products/${id(productId)}/variants`, { method: 'PUT', json: variants });
+/** Replace the whole piece (details, pricing mode, prices and sizes) in ONE atomic request. */
+export const saveProduct = (productId, body) => api(`/products/${id(productId)}`, { method: 'PUT', json: body });
 
 export const deleteProduct = (productId) => api(`/products/${id(productId)}`, { method: 'DELETE' });
 
+// ---- photos
 export const uploadImage = (productId, file) => {
   const body = new FormData();
   body.append('file', file);
@@ -27,3 +27,12 @@ export const deleteImage = (productId, imageId) =>
 
 export const reorderImages = (productId, imageIds) =>
   api(`/products/${id(productId)}/images/order`, { method: 'PUT', json: { image_ids: imageIds } });
+
+// ---- discounts
+export const listDiscounts = () => api('/admin/discounts');
+
+export const createDiscount = (body) => api('/admin/discounts', { method: 'POST', json: body });
+
+export const replaceDiscount = (discountId, body) => api(`/admin/discounts/${id(discountId)}`, { method: 'PUT', json: body });
+
+export const deleteDiscount = (discountId) => api(`/admin/discounts/${id(discountId)}`, { method: 'DELETE' });

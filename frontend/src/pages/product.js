@@ -2,7 +2,8 @@ import { getCatalogueOptions } from '../api/catalogue.js';
 import { getProduct } from '../api/products.js';
 import { el, link } from '../components/dom.js';
 import { errorState, loading } from '../components/states.js';
-import { formatNaira } from '../lib/money.js';
+import { priceNode } from '../components/price.js';
+import { discountNote, percentOff, priceDisplay, variantPriceDisplay } from '../lib/pricing.js';
 import { formatMeasurements, isSoldOut, sizeLabel, sortedImages, sortVariants } from '../lib/products.js';
 
 const LOW_STOCK = 3;
@@ -22,7 +23,7 @@ const gallery = (product) => {
   return el('div', { className: 'gallery' }, main, thumbs);
 };
 
-const sizePicker = (product, options) => {
+const sizePicker = (product, options, onChange) => {
   const variants = sortVariants(product.variants, options);
   let selected = variants.find((v) => v.stock > 0)?.size ?? null;
 
@@ -43,6 +44,7 @@ const sizePicker = (product, options) => {
     }));
 
     const current = variants.find((v) => v.size === selected);
+    onChange(current ?? null); // the price shown depends on which size is chosen
     if (!current) { details.replaceChildren(); return; }
 
     const rows = formatMeasurements(current.measurements, options);
@@ -72,6 +74,19 @@ export const renderProduct = (view, { params }) => {
     try {
       // The size list only improves labels and ordering, so its failure must not hide the piece.
       const [product, options] = await Promise.all([getProduct(params.id), getCatalogueOptions().catch(() => null)]);
+      // The price is its own block because it changes with the selected size (sizes can be
+      // priced separately) and shows the sale while a discount is live.
+      const priceBlock = el('div', { className: 'price-block' });
+      const drawPrice = (variant) => {
+        const display = variant ? { prefix: '', ...variantPriceDisplay(variant) } : priceDisplay(product);
+        const off = display.original === null ? 0 : percentOff(display.original, display.current);
+        priceBlock.replaceChildren(
+          el('div', { className: 'price-line' }, priceNode(display, 'price big'), off > 0 && el('span', { className: 'badge sale', textContent: `-${off}%` })),
+          product.discount && el('p', { className: 'discount-note', textContent: discountNote(product.discount, new Date().getTimezoneOffset()) }),
+        );
+      };
+      const picker = sizePicker(product, options, drawPrice);
+
       view.replaceChildren(
         el(
           'article',
@@ -81,10 +96,10 @@ export const renderProduct = (view, { params }) => {
             'div',
             { className: 'info' },
             el('h1', { textContent: product.name }),
-            el('p', { className: 'price', textContent: formatNaira(product.price_kobo) }),
+            priceBlock,
             isSoldOut(product) && el('p', { className: 'badge', textContent: 'Sold out' }),
             product.description && el('p', { className: 'description', textContent: product.description }),
-            sizePicker(product, options),
+            picker,
           ),
         ),
       );

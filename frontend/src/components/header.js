@@ -12,7 +12,7 @@ export const renderHeader = (host, { status, user }, { onSignOut } = {}) => {
   const nav = el('nav', { className: 'account', attrs: { 'aria-label': 'Account' } });
 
   if (status === 'ready' && user) {
-    if (user.role === 'owner') nav.append(link('/admin', 'Manage shop'));
+    if (user.role === 'owner') nav.append(link('/admin', 'Manage shop'), link('/admin/discounts', 'Discounts'));
     const signOut = el('button', { type: 'button', className: 'sign-out', textContent: 'Sign out' });
     signOut.addEventListener('click', () => onSignOut?.());
     nav.append(el('span', { className: 'who', textContent: user.name || user.email }), signOut);
