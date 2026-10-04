@@ -1,6 +1,12 @@
 # Pending work and roadmap
 
-Last updated: 2026-10-01 (after M4). Context: **close deadline, solo developer, also here to learn.** Update this file whenever something is finished or discovered.
+Last updated: 2026-10-04 (direction change; see below). Context: **close deadline, solo developer, also here to learn.** Update this file whenever something is finished or discovered.
+
+## Direction change (2026-10-04)
+- **New priority:** a mobile app (Expo / React Native, testable on iPhone via Expo Go) and **hosting** (Render free for the API, Netlify for the website). Full plan: [docs/plans/2026-10-04-mobile-and-hosting.md](docs/plans/2026-10-04-mobile-and-hosting.md).
+- **Payments:** Flutterwave is replaced by **Paystack (test mode)**. **Email:** the free alternative to Mailgun is still to be chosen (Brevo proposed). Both are **pended** until after the mobile/hosting blocks; M5 and M6 below are postponed accordingly (their ADR becomes 0015).
+- **D1 (deploy) is no longer postponed:** it is now blocks 3 and 4 of the new plan.
+- **First step of the plan:** restore a stray space at the top of `backend/app/domain/pricing.py` that currently breaks the backend (an accidental editor change; the file does not import).
 
 ## How we work through the milestones
 - Every milestone is a **vertical slice**: backend + frontend + tests + docs, finishing with something you can click through. Nothing "backend only" is left waiting for a UI.
@@ -17,10 +23,10 @@ Last updated: 2026-10-01 (after M4). Context: **close deadline, solo developer, 
 | Logging system | Done | Structured logs, request ids, no URL/query-string leaks |
 | M1b Images + storefront + owner dashboard | **Built and tested; needs your browser click-through** | Backend verified live as owner; UI verified in jsdom only |
 | M3 Discounts + per-size pricing | **Built and tested; needs your browser click-through** | Backend verified live (real DB), pages in jsdom against the real API |
-| D1 Deploy checkpoint | **Postponed by decision** | Hosting to be chosen later |
+| D1 Deploy checkpoint | **Now planned (blocks 3-4 of the mobile/hosting plan)** | Render (API) + Netlify (web) |
 | M4 Cart + order history | **Built and tested; needs your browser click-through** | Backend verified live; shopper pages verified in jsdom against the real API |
-| **M5 Checkout + Flutterwave** | **Next** | Needs Flutterwave test keys (and Mailgun for M6) |
-| M6 Mailgun emails | Planned | |
+| M5 Checkout (now **Paystack**, test mode) | **Postponed** | After mobile + hosting; needs Paystack test keys |
+| M6 Emails (provider to be chosen; Brevo proposed) | **Postponed** | Welcome email on sign-up and a checkout confirmation |
 | M7 Reviews and ratings | Planned | |
 | M8 Hardening + final deploy | Planned | |
 
@@ -112,7 +118,7 @@ Deploying late is the biggest risk for a close deadline, so deploy the M1b versi
 - [ ] **Re-check everything at checkout** through `cart_totals`/`quote_variant`: stock, per-order limits, hidden pieces, prices; refuse a zero total; build the order lines as snapshots (`order_items`).
 - [ ] Create `pending` order from the cart; start Flutterwave payment with a unique `tx_ref`; return the payment link.
 - [ ] Webhook: **verify signature header**, **verify the transaction server-side with Flutterwave**, mark paid **idempotently**, decrement stock in **one database transaction**, clear the cart. Never trust the redirect alone.
-- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0012 (payment flow).
+- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0015 (payment flow, Paystack).
 **Frontend**
 - [ ] Checkout page (address form, order summary, pay button) that redirects to Flutterwave.
 - [ ] Return page that reads the order status from the backend (poll briefly while the webhook lands), with success, failed and "still processing" states.
