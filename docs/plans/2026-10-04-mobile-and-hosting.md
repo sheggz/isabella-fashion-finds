@@ -1,6 +1,12 @@
 # Plan: mobile app and hosting
 
-Date: 2026-10-04 · Status: **proposed, awaiting approval** · Owner: solo developer (learning as we go)
+Date: 2026-10-04 · Status: **approved, in progress** · Owner: solo developer (learning as we go)
+
+## Progress
+| Block | State |
+|---|---|
+| 0 Foundation | **Done 2026-10-04**: private GitHub repo, first CI run, hermetic tests (the root npm workspace moved to block 1) |
+| 1 to 10 | Not started |
 
 ## 1. Goal
 1. A **mobile app** you can test on your iPhone (and Android) that does everything the website does: browse, product pages, sign in with Google, cart, orders, and the owner's tools (pieces, photos, discounts).
