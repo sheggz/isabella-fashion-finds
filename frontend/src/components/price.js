@@ -1,8 +1,8 @@
-import { formatNaira } from '../lib/money.js';
+import { formatNaira } from '@isabella/core';
 import { el } from './dom.js';
 
 /**
- * A price line from the display rules in lib/pricing.js: optional "From " prefix, the original
+ * A price line from the display rules in @isabella/core (lib/pricing.js): optional "From " prefix, the original
  * price struck through during a sale, then the price to pay.
  *
  * @param {{prefix: string, current: number | null, original: number | null}} display

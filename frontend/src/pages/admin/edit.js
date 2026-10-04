@@ -5,9 +5,14 @@ import {
 import { getCatalogueOptions } from '../../api/catalogue.js';
 import { el, link } from '../../components/dom.js';
 import { errorState, loading } from '../../components/states.js';
-import { remainingSlots, validateImageFile } from '../../lib/images.js';
-import { emptyForm, formToPayload, productToForm } from '../../lib/productForm.js';
-import { sortedImages } from '../../lib/products.js';
+import {
+  emptyForm,
+  formToPayload,
+  productToForm,
+  remainingSlots,
+  sortedImages,
+  validateImageFile,
+} from '@isabella/core';
 
 const fieldError = (key) => el('p', { className: 'field-error', hidden: true, dataset: { error: key } });
 

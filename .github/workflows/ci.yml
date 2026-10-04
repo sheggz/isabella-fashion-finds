@@ -1,6 +1,7 @@
 name: CI
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:
@@ -14,9 +15,10 @@ jobs:
       - run: uv run ruff check .
       - run: uv run pytest -q
 
-  frontend:
+  # The website and the shared core package (and, later, the mobile app) live in one npm
+  # workspace, so they install once at the repository root and are tested together.
+  javascript:
     runs-on: ubuntu-latest
-    defaults: { run: { working-directory: frontend } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

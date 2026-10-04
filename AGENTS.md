@@ -5,10 +5,11 @@ Online store for a fashion brand. The owner manages a catalogue; customers sign 
 ## Stack
 - **Backend:** Python, FastAPI (`backend/`)
 - **Frontend:** plain JavaScript (ES modules) + Vite + Vitest, no framework yet (`frontend/`)
+- **Shared core:** `packages/core` (`@isabella/core`): the pure logic and API layer used by every client (website now, mobile app next). An npm workspace at the repository root.
 - **Persistence/storage:** Supabase as managed Postgres + Storage. Data API and Supabase Auth are NOT used. FastAPI reaches Postgres directly via SQLAlchemy 2.x (psycopg) with Alembic migrations (`backend/alembic/`); every table enables RLS with no policies. The service key stays server-side and is only for Storage.
 - **Auth:** FastAPI handles Google OAuth itself; session is a signed httpOnly cookie. Roles: `customer`, `owner` (bootstrapped from `OWNER_EMAILS`).
 - **Payments:** Flutterwave (NGN only). **Email:** Mailgun.
-- Monorepo: backend, frontend, docs, and DB migrations live together.
+- Monorepo: backend, frontend, packages/core, (mobile), docs, and DB migrations live together.
 
 ## Coding rules
 1. **Pure functions first.** Business logic (pricing, discounts, order totals, stock checks) must be pure: same input gives the same output, no I/O, no clock or randomness read inside (pass `now`, ids in as arguments), no mutation of arguments.
@@ -23,7 +24,8 @@ Online store for a fashion brand. The owner manages a catalogue; customers sign 
 6. **Explain the non-obvious in docstrings.** When code depends on a subtlety a reader wouldn't spot (implicit behaviour, framework or language quirks, import-time vs call-time effects, ordering that matters, a deliberate trade-off, a security reason), say what is going on and why in the function's docstring. Examples: why a function is cached, why a call only works inside an `except` block, why a cookie is `SameSite=Lax`. Don't narrate obvious lines. Explain the *why*, in plain language, for a reader new to the code and to Python/JavaScript. In JavaScript use a JSDoc block above the function.
 
 ## Frontend rules
-- Layout under `frontend/src/`: `api/` (the only code that calls the backend), `lib/` (pure, unit-tested helpers), `state/` (small stores with pure update functions), `pages/`, `components/`, `router.js`.
+- Layout under `frontend/src/`: `api/` (the only code that calls the backend, built on the shared endpoint factories), `state/` (small stores), `pages/`, `components/`, `router.js`, and `lib/route.js` (web-only routing).
+- **Shared logic lives in `packages/core`, not in an app.** Anything pure and useful to more than one client (money, price/sale display, cart rules, form validation, time helpers, the error normaliser, the API client factory and endpoint list, the poller) is added there, tested first, and imported with `import { ... } from '@isabella/core'`. Never copy it into an app. Apps only add platform glue (DOM or React Native) on top.
 - Pure logic (money formatting, cart totals, price display, validation) lives in `lib/` and is tested first with Vitest. DOM and fetch code stays thin.
 - Build DOM with `createElement`/`textContent`. Never put server or user data into `innerHTML`.
 - Show only normalised errors from `api/apiError.js`; every screen handles loading, empty and error states.
@@ -50,8 +52,10 @@ Every response carries an `X-Request-ID` header.
 - New migration: `cd backend && uv run alembic revision --autogenerate -m "message"` (then review it and add RLS for new tables by hand)
 - Apply migrations: `cd backend && uv run alembic upgrade head`
 - Run API: `cd backend && uv run uvicorn app.main:app --reload`
-- Frontend tests: `cd frontend && npm test`
-- Run frontend: `cd frontend && npm run dev`
+- JavaScript install (once, at the repo root): `npm install`
+- All JavaScript tests (website + core): `npm test` (one workspace: `npm test -w packages/core`)
+- Run the website: `npm run dev -w frontend`
+- Build the website: `npm run build`
 
 ## Conventions
 - Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`).

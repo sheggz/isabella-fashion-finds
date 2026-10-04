@@ -14,19 +14,21 @@ uv run uvicorn app.main:app --reload
 uv run pytest                   # tests
 uv run ruff check .             # lint
 
-# frontend (http://localhost:5173)
-cd frontend && npm install
-npm run dev
-npm test
+# JavaScript (website + shared core): ONE install at the repository root
+npm install                     # installs every workspace
+npm test                        # tests every workspace (website + packages/core)
+npm run dev -w frontend         # website at http://localhost:5173
+npm run build                   # production build of the website
 ```
 
 ## Layout
 - `backend/`: FastAPI (routers, services, repositories, integrations)
-- `frontend/`: plain JavaScript + Vite + Vitest
+- `frontend/`: the website: plain JavaScript + Vite + Vitest
+- `packages/core/`: shared pure logic and API layer used by the website and (soon) the mobile app
 - `docs/adr/`: architecture decision records
 - `supabase/migrations/`: database schema (added in M1)
 
 ## Roadmap
-Each milestone is a vertical slice (backend + frontend + tests). See [pending.md](pending.md) for the full plan and status.
-
-M0 scaffold ✅ · M1a catalogue API ✅ · M2 Google sign-in ✅ · **M1b images, storefront and owner dashboard** · D1 deploy checkpoint · M3 discounts · M4 cart and orders · M5 Flutterwave checkout · M6 Mailgun emails · M7 reviews · M8 hardening and final deploy
+Done: scaffold, catalogue, Google sign-in, photos, pricing and discounts, cart, order history, shared core package.
+In progress: the mobile app (Expo) and hosting (Render for the API, Netlify for the website). See [docs/plans/2026-10-04-mobile-and-hosting.md](docs/plans/2026-10-04-mobile-and-hosting.md) and [pending.md](pending.md).
+Later: Paystack checkout (test mode) and transactional email.

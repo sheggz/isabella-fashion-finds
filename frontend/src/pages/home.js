@@ -2,8 +2,7 @@ import { listProducts } from '../api/products.js';
 import { el } from '../components/dom.js';
 import { emptyState, errorState, loading } from '../components/states.js';
 import { priceNode } from '../components/price.js';
-import { percentOff, priceDisplay } from '../lib/pricing.js';
-import { coverImage, isSoldOut } from '../lib/products.js';
+import { coverImage, isSoldOut, percentOff, priceDisplay } from '@isabella/core';
 
 const card = (product) => {
   const cover = coverImage(product);

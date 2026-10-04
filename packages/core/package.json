@@ -1,0 +1,17 @@
+{
+  "name": "@isabella/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure logic and the API layer shared by the website and the mobile app",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}

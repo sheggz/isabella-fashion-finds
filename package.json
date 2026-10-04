@@ -1,0 +1,13 @@
+{
+  "name": "isabella-fashion-finds",
+  "private": true,
+  "description": "Monorepo: backend (Python), frontend (web), packages/core (shared logic), mobile (added later)",
+  "workspaces": [
+    "frontend",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "build": "npm run build -w frontend"
+  }
+}

@@ -2,7 +2,7 @@
 // ../products.js, so a page cannot tell the difference. Used when VITE_USE_MOCKS=true.
 // The shape mirrors the backend's `ProductOut` (backend/app/schemas/product.py); if that
 // schema changes, update this file too (tests/products.mock.test.js checks the keys).
-import { networkError } from '../apiError.js';
+import { networkError } from '@isabella/core';
 
 const photo = (seed) => `https://picsum.photos/seed/${seed}/600/800`;
 
@@ -99,7 +99,7 @@ export const listProducts = () => later(structuredClone(PRODUCTS));
 export const getProduct = async (id) => {
   const found = PRODUCTS.find((p) => p.id === id);
   if (!found) {
-    // Reject with the same normalised shape the real client throws (see apiError.js).
+    // Reject with the same normalised shape the real client throws (see @isabella/core, api/apiError.js).
     await later(null);
     throw { status: 404, code: 'not_found', message: 'Product not found', details: null, requestId: null };
   }
