@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     session_secret: str = ""
+    # Where the mobile app may be sent after Google sign-in: comma-separated link prefixes. The app's
+    # own scheme by default; add "exp://" ONLY while testing in Expo Go (see ADR 0013).
+    mobile_redirect_prefixes: str = "isabella://"
     frontend_url: str = "http://localhost:5173"  # where users land after login
     backend_url: str = "http://localhost:8000"  # public URL of this API (builds the OAuth callback)
 
@@ -32,6 +35,10 @@ class Settings(BaseSettings):
     @property
     def log_json(self) -> bool:
         return self.log_format == "json" or (self.log_format == "auto" and self.app_env == "production")
+
+    @property
+    def mobile_redirect_prefix_list(self) -> list[str]:
+        return [p.strip() for p in self.mobile_redirect_prefixes.split(",") if p.strip()]
 
     @property
     def cookie_secure(self) -> bool:

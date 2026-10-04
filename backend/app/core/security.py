@@ -20,12 +20,22 @@ SESSION_COOKIE = "session"
 SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 
 
+def bearer_token(request: Request) -> str | None:
+    """The token from an `Authorization: Bearer <token>` header, or None for any other scheme."""
+    scheme, _, value = request.headers.get("authorization", "").partition(" ")
+    value = value.strip()
+    return value if scheme.lower() == "bearer" and value else None
+
+
 def current_user_optional(
     request: Request,
     db: Annotated[Session, Depends(get_session)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> User | None:
-    token = request.cookies.get(SESSION_COOKIE)
+    # The same signed token travels two ways: a cookie (the website) or a bearer header (the phone
+    # app). If a bearer header is present it is used ALONE: when explicit credentials fail we say
+    # so, rather than quietly falling back to a different login that happens to be in a cookie.
+    token = bearer_token(request) or request.cookies.get(SESSION_COOKIE)
     if not token:
         return None
     user_id = read_session(settings.session_secret, token, SESSION_MAX_AGE_SECONDS)
