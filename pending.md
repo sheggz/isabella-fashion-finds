@@ -4,7 +4,7 @@ Last updated: 2026-10-04 (direction change; see below). Context: **close deadlin
 
 ## Direction change (2026-10-04)
 - **New priority:** a mobile app (Expo / React Native, testable on iPhone via Expo Go) and **hosting** (Render free for the API, Netlify for the website). Full plan: [docs/plans/2026-10-04-mobile-and-hosting.md](docs/plans/2026-10-04-mobile-and-hosting.md).
-- **Payments:** Flutterwave is replaced by **Paystack (test mode)**. **Email:** the free alternative to Mailgun is still to be chosen (Brevo proposed). Both are **pended** until after the mobile/hosting blocks; M5 and M6 below are postponed accordingly (their ADR becomes 0015).
+- **Payments:** Paystack is replaced by **Paystack (test mode)**. **Email:** the free alternative to the email provider is still to be chosen (Brevo proposed). Both are **pended** until after the mobile/hosting blocks; M5 and M6 below are postponed accordingly (their ADR becomes 0015).
 - **D1 (deploy) is no longer postponed:** it is now blocks 3 and 4 of the new plan.
 - **First step of the plan:** restore a stray space at the top of `backend/app/domain/pricing.py` that currently breaks the backend (an accidental editor change; the file does not import).
 
@@ -111,27 +111,27 @@ Deploying late is the biggest risk for a close deadline, so deploy the M1b versi
 - [ ] Stock is deliberately not held by the cart: two shoppers can hold the last item; checkout must re-check (M5).
 - [ ] Order lines keep a photo path, not the photo: if the owner later deletes that photo from Storage the history image will be broken.
 
-## M5: Checkout + Flutterwave
+## M5: Checkout + Paystack (test mode) — POSTPONED
 **Goal:** a customer pays and the order becomes paid exactly once.
 **Backend**
 - [ ] Delivery address capture (NGN only, no shipping calculation); add the address and payment columns (tx_ref, paid_at handling) to `orders` with a migration.
 - [ ] **Re-check everything at checkout** through `cart_totals`/`quote_variant`: stock, per-order limits, hidden pieces, prices; refuse a zero total; build the order lines as snapshots (`order_items`).
-- [ ] Create `pending` order from the cart; start Flutterwave payment with a unique `tx_ref`; return the payment link.
-- [ ] Webhook: **verify signature header**, **verify the transaction server-side with Flutterwave**, mark paid **idempotently**, decrement stock in **one database transaction**, clear the cart. Never trust the redirect alone.
-- [ ] Flutterwave adapter in `integrations/flutterwave.py` (timeouts, errors translated); ADR 0015 (payment flow, Paystack).
+- [ ] Create `pending` order from the cart; start Paystack payment with a unique `tx_ref`; return the payment link.
+- [ ] Webhook: **verify signature header**, **verify the transaction server-side with Paystack**, mark paid **idempotently**, decrement stock in **one database transaction**, clear the cart. Never trust the redirect alone.
+- [ ] Paystack adapter in `integrations/paystack.py` (timeouts, errors translated); ADR 0015 (payment flow, Paystack).
 **Frontend**
-- [ ] Checkout page (address form, order summary, pay button) that redirects to Flutterwave.
+- [ ] Checkout page (address form, order summary, pay button) that redirects to Paystack.
 - [ ] Return page that reads the order status from the backend (poll briefly while the webhook lands), with success, failed and "still processing" states.
 **Done when:** a test-mode payment marks the order paid, reduces stock and shows in order history; replaying the webhook changes nothing.
 
-## M6: Mailgun payment emails
+## M6: Transactional emails (provider to be chosen) — POSTPONED
 **Goal:** customers get a confirmation email after paying.
-- [ ] Mailgun adapter in `integrations/mailgun.py`; template as a **pure** function (order data in, subject/body out; tested).
+- [ ] Email adapter in `integrations/email.py` (provider to be chosen; Brevo proposed); template as a **pure** function (order data in, subject/body out; tested).
 - [ ] Sent as a background task after payment confirmation; **a failed email never fails a paid order** (log a warning, record "email not sent" for retry).
 - [ ] Optional: owner notification email.
 - [ ] Frontend: confirmation screen mentions the email; nothing else needed.
-**Caveat:** the Mailgun sandbox only emails pre-authorised recipients; a verified domain is needed for real customers.
-**Done when:** a test payment sends an email to an authorised address, and a simulated Mailgun outage leaves the order paid.
+**Caveat:** free email providers require sender verification (and some a verified domain) before real customers receive mail; Brevo allows verifying a single sender address.
+**Done when:** a test payment sends an email to an authorised address, and a simulated the email provider outage leaves the order paid.
 
 ## M7: Reviews and ratings
 **Goal:** customers who bought a piece can rate and review it.
@@ -147,7 +147,7 @@ Deploying late is the biggest risk for a close deadline, so deploy the M1b versi
 - [ ] Postgres integration test suite (constraints, RLS, concurrent stock decrement), since current tests run on SQLite.
 - [ ] Frontend end-to-end smoke test; accessibility pass (labels, focus, keyboard); mobile layout check.
 - [ ] Seed script with demo products; README with full setup (Google console, Supabase connection string, env vars).
-- [ ] Final production checks: secrets rotated, Flutterwave live keys (if the business account is verified), Mailgun domain verified, error alerting on ERROR-level logs.
+- [ ] Final production checks: secrets rotated, Paystack live keys (if the business account is verified), the email provider domain verified, error alerting on ERROR-level logs.
 
 ---
 
@@ -163,7 +163,7 @@ Deploying late is the biggest risk for a close deadline, so deploy the M1b versi
 | Business events not logged yet (order paid, email sent); no log shipping/alerting | M5, M6, M8 |
 | Owner promotion endpoint (`OWNER_EMAILS` only bootstraps) | after M7, if time allows |
 | Pagination metadata, search/filter, order status workflow for the owner | optional extras |
-| Flutterwave live keys need a verified business account | M8 |
+| Paystack live keys need a verified business account | M8 |
 
 ## Decisions still open
 - Hosting providers for frontend and backend (needed at D1).
