@@ -2,8 +2,42 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 
+from app.core.config import get_settings
 from app.core.errors import Conflict, NotFound, OutOfStock, ServiceUnavailable
+from app.db.session import get_engine
 from app.main import create_app
+
+TEST_ENV = {
+    # Never connected to: the engine is created lazily and tests replace the session.
+    "DATABASE_URL": "postgresql://test:test@localhost:1/test",
+    "SESSION_SECRET": "t" * 48,
+    "SUPABASE_URL": "https://test.supabase.co",
+    "SUPABASE_SERVICE_KEY": "sb_secret_test_key_for_tests_only_0123456789",
+    "STORAGE_BUCKET": "product-images",
+    "APP_ENV": "development",
+    "OWNER_EMAILS": "",
+    "GOOGLE_CLIENT_ID": "test-client-id",
+    "GOOGLE_CLIENT_SECRET": "test-client-secret",
+}
+
+
+@pytest.fixture(autouse=True)
+def hermetic_settings(monkeypatch):
+    """Give every test the SAME configuration, whatever machine it runs on.
+
+    Without this, tests silently depended on a developer's local `.env`: with a real
+    DATABASE_URL a request with no login got a clean 401, but on a clean machine (CI) the
+    app answered 503 "database not configured" before reaching the login check. Environment
+    variables win over the .env file, so setting them here makes the .env irrelevant. The
+    caches are cleared before and after so nothing leaks between tests.
+    """
+    for name, value in TEST_ENV.items():
+        monkeypatch.setenv(name, value)
+    get_settings.cache_clear()
+    get_engine.cache_clear()
+    yield
+    get_settings.cache_clear()
+    get_engine.cache_clear()
 
 
 class FakeStorage:
