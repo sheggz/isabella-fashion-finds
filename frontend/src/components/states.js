@@ -7,7 +7,7 @@ export const loading = (message = 'Loading…') =>
 export const emptyState = (title, hint) =>
   el('div', { className: 'state' }, el('p', { className: 'state-title', textContent: title }), hint && el('p', { textContent: hint }));
 
-/** `error` is the normalised shape from api/apiError.js; `onRetry` re-runs whatever failed. */
+/** `error` is the normalised shape from @isabella/core (api/apiError.js); `onRetry` re-runs whatever failed. */
 export const errorState = (error, onRetry) => {
   const retry = el('button', { type: 'button', textContent: 'Try again', dataset: { retry: '' } });
   retry.addEventListener('click', onRetry);

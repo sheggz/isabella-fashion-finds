@@ -2,10 +2,7 @@ import { listOrders } from '../api/orders.js';
 import { el, link } from '../components/dom.js';
 import { priceNode } from '../components/price.js';
 import { emptyState, errorState, loading } from '../components/states.js';
-import { sizeText } from '../lib/cart.js';
-import { formatNaira } from '../lib/money.js';
-import { orderStatusLabel } from '../lib/orders.js';
-import { formatWhen } from '../lib/time.js';
+import { formatNaira, formatWhen, orderStatusLabel, sizeText } from '@isabella/core';
 
 const itemNode = (item) => {
   const original = item.base_price_kobo > item.unit_price_kobo ? item.base_price_kobo : null;

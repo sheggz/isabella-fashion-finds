@@ -4,9 +4,18 @@ import { getProduct } from '../api/products.js';
 import { el, link } from '../components/dom.js';
 import { errorState, loading } from '../components/states.js';
 import { priceNode } from '../components/price.js';
-import { addToCartState } from '../lib/cart.js';
-import { discountNote, percentOff, priceDisplay, variantPriceDisplay } from '../lib/pricing.js';
-import { formatMeasurements, isSoldOut, sizeLabel, sortedImages, sortVariants } from '../lib/products.js';
+import {
+  addToCartState,
+  discountNote,
+  formatMeasurements,
+  isSoldOut,
+  percentOff,
+  priceDisplay,
+  sizeLabel,
+  sortedImages,
+  sortVariants,
+  variantPriceDisplay,
+} from '@isabella/core';
 import { addItem } from '../state/cart.js';
 import { session } from '../state/session.js';
 

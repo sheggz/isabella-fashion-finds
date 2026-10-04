@@ -2,8 +2,7 @@ import { deleteProduct, listAdminProducts } from '../../api/admin.js';
 import { getCatalogueOptions } from '../../api/catalogue.js';
 import { el, link } from '../../components/dom.js';
 import { emptyState, errorState, loading } from '../../components/states.js';
-import { formatNaira } from '../../lib/money.js';
-import { stockSummary } from '../../lib/products.js';
+import { formatNaira, stockSummary } from '@isabella/core';
 
 export const renderAdminList = (view) => {
   const heading = el(

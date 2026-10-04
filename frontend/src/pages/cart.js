@@ -1,8 +1,7 @@
 import { el, link } from '../components/dom.js';
 import { priceNode } from '../components/price.js';
 import { emptyState, errorState, loading } from '../components/states.js';
-import { checkoutBlocked, lineNotices, sizeText, stepperState } from '../lib/cart.js';
-import { formatNaira } from '../lib/money.js';
+import { checkoutBlocked, formatNaira, lineNotices, sizeText, stepperState } from '@isabella/core';
 import { cart, changeQuantity, emptyCart, loadCart, removeLine } from '../state/cart.js';
 
 /**

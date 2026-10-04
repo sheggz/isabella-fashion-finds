@@ -2,7 +2,7 @@
 // state is simply "the last cart the server sent": no client-side arithmetic that could drift
 // from what the server will actually charge.
 import { addToCart, clearCart, getCart, removeFromCart, setCartQuantity } from '../api/cart.js';
-import { createStore } from '../lib/store.js';
+import { createStore } from '@isabella/core';
 
 /** { status: 'idle' | 'loading' | 'ready' | 'error', data: cart | null, error: error | null } */
 export const cart = createStore({ status: 'idle', data: null, error: null });

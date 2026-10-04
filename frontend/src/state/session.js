@@ -1,5 +1,5 @@
 // Who is signed in. The browser can't read the httpOnly session cookie, so it asks the server.
-import { createStore } from '../lib/store.js';
+import { createStore } from '@isabella/core';
 import { getMe, logout } from '../api/auth.js';
 
 /** { status: 'loading' | 'ready', user: object | null, error?: string } */

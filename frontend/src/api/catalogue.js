@@ -1,4 +1,5 @@
+import { createCatalogueApi } from '@isabella/core';
 import { api } from './client.js';
 
-/** The fixed sizes and measurement body parts, published by the backend (single source of truth). */
-export const getCatalogueOptions = () => api('/catalogue/options');
+/** The fixed sizes, body parts, photo rules and cart ceiling, published by the backend. */
+export const { getCatalogueOptions } = createCatalogueApi(api);

@@ -2,9 +2,15 @@ import { createDiscount, deleteDiscount, listAdminProducts, listDiscounts, repla
 import { el } from '../../components/dom.js';
 import { emptyState, errorState, loading } from '../../components/states.js';
 import {
-  appliesText, describeDiscount, discountToForm, emptyDiscountForm, formToDiscountPayload, scheduleText, STATUS_LABELS,
-} from '../../lib/discountForm.js';
-import { zoneLabel } from '../../lib/time.js';
+  appliesText,
+  describeDiscount,
+  discountToForm,
+  emptyDiscountForm,
+  formToDiscountPayload,
+  scheduleText,
+  STATUS_LABELS,
+  zoneLabel,
+} from '@isabella/core';
 
 const fieldError = (key) => el('p', { className: 'field-error', hidden: true, dataset: { error: key } });
 

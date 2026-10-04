@@ -10,7 +10,7 @@ vi.mock('../src/api/admin.js', () => ({
 }));
 
 import * as admin from '../src/api/admin.js';
-import { fromLocalInputValue } from '../src/lib/time.js';
+import { fromLocalInputValue } from '@isabella/core';
 import { renderAdminDiscounts } from '../src/pages/admin/discounts.js';
 
 const TZ = new Date().getTimezoneOffset(); // whatever this machine uses; the page uses the same
