@@ -6,7 +6,8 @@ Date: 2026-10-04 · Status: **approved, in progress** · Owner: solo developer (
 | Block | State |
 |---|---|
 | 0 Foundation | **Done 2026-10-04**: private GitHub repo, first CI run, hermetic tests (the root npm workspace moved to block 1) |
-| 1 to 10 | Not started |
+| 1 Shared core package | **Done 2026-10-04**: `@isabella/core` (158 tests), website on it (175 tests), client/endpoint factories and poller, CI on workspaces (PR #1) |
+| 2 to 10 | Not started |
 
 ## 1. Goal
 1. A **mobile app** you can test on your iPhone (and Android) that does everything the website does: browse, product pages, sign in with Google, cart, orders, and the owner's tools (pieces, photos, discounts).
