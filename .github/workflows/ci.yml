@@ -26,3 +26,29 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+
+  # Builds the real Docker image and starts it the way a host would, with NO database, then
+  # checks it from the outside. This catches problems unit tests cannot: a missing file in the
+  # image, a broken entrypoint, a production-mode crash on start-up.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the backend image
+        run: docker build -t isabella-api backend
+      - name: Start it in production mode (no database)
+        run: |
+          docker run -d --name api -p 8000:8000 \
+            -e RUN_MIGRATIONS=false -e APP_ENV=production \
+            -e DATABASE_URL=postgresql://x:x@localhost:1/x \
+            -e SESSION_SECRET=0123456789012345678901234567890123456789ab \
+            -e GOOGLE_CLIENT_ID=ci-client -e GOOGLE_CLIENT_SECRET=ci-secret \
+            -e BACKEND_URL=http://localhost:8000 -e FRONTEND_URL=http://localhost:5173 \
+            -e SUPABASE_URL=https://ci.supabase.co -e SUPABASE_SERVICE_KEY=sb_secret_ci \
+            isabella-api
+          for i in $(seq 1 40); do curl -sf http://localhost:8000/health && break; sleep 1; done
+      - name: Smoke-test the running container
+        run: python3 backend/scripts/smoke_test.py http://localhost:8000 --no-db --expect-callback http://localhost:8000/auth/google/callback
+      - name: Show the container logs
+        if: always()
+        run: docker logs api | tail -30
