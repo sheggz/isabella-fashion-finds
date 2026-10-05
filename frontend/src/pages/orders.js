@@ -1,5 +1,6 @@
 import { listOrders } from '../api/orders.js';
 import { el, link } from '../components/dom.js';
+import { keepFresh } from '../live.js';
 import { priceNode } from '../components/price.js';
 import { emptyState, errorState, loading } from '../components/states.js';
 import { formatNaira, formatWhen, orderStatusLabel, sizeText } from '@isabella/core';
@@ -42,22 +43,33 @@ const orderNode = (order, tzOffset) =>
 
 export const renderOrders = (view) => {
   const title = el('h1', { textContent: 'My orders' });
+  let shown = null;
+
+  const draw = (orders) => {
+    shown = JSON.stringify(orders);
+    const tz = new Date().getTimezoneOffset();
+    view.replaceChildren(
+      title,
+      orders.length
+        ? el('div', { className: 'orders' }, ...orders.map((o) => orderNode(o, tz)))
+        : el('div', {}, emptyState('No orders yet', 'When you buy something it will show up here.'), link('/', 'Browse the shop')),
+    );
+  };
 
   const load = async () => {
     view.replaceChildren(title, loading());
     try {
-      const orders = await listOrders();
-      const tz = new Date().getTimezoneOffset();
-      view.replaceChildren(
-        title,
-        orders.length
-          ? el('div', { className: 'orders' }, ...orders.map((o) => orderNode(o, tz)))
-          : el('div', {}, emptyState('No orders yet', 'When you buy something it will show up here.'), link('/', 'Browse the shop')),
-      );
+      draw(await listOrders());
     } catch (error) {
       view.replaceChildren(title, errorState(error, load));
     }
   };
 
+  const refresh = async () => {
+    const orders = await listOrders();
+    if (JSON.stringify(orders) !== shown) draw(orders);
+  };
+
   load();
+  return keepFresh(refresh);
 };
