@@ -8,7 +8,8 @@ Date: 2026-10-04 · Status: **approved, in progress** · Owner: solo developer (
 | 0 Foundation | **Done 2026-10-04**: private GitHub repo, first CI run, hermetic tests (the root npm workspace moved to block 1) |
 | 1 Shared core package | **Done 2026-10-04**: `@isabella/core` (158 tests), website on it (175 tests), client/endpoint factories and poller, CI on workspaces (PR #1) |
 | 2 Backend ready for mobile + Docker | **Done 2026-10-05**: bearer tokens, one-time codes + PKCE (RFC vector verified), redirect allowlist, `auth_codes` table, Dockerfile, smoke-test script, CI `docker` job green (PR #2); 511 backend tests |
-| 3 to 10 | Not started |
+| 3 Host the API (Render) | **Done 2026-10-05**: `render.yaml`, ADR 0014, live at https://isabella-api.onrender.com, smoke test 10/10 (PR #3) |
+| 4 to 10 | Not started |
 
 ## 1. Goal
 1. A **mobile app** you can test on your iPhone (and Android) that does everything the website does: browse, product pages, sign in with Google, cart, orders, and the owner's tools (pieces, photos, discounts).

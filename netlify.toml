@@ -1,0 +1,23 @@
+# Netlify build + routing for the website. Docs: https://docs.netlify.com/configure-builds/file-based-configuration/
+[build]
+  command = "npm run build"
+  publish = "frontend/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # The website calls /api/... on its OWN address; Netlify forwards it to the Render API (below).
+  VITE_API_URL = "/api"
+
+# 1) API forwarding (reverse proxy). status = 200 means "serve the other server's answer under this
+#    address" (a redirect would change the address in the browser). Order matters: first match wins.
+[[redirects]]
+  from = "/api/*"
+  to = "https://isabella-api.onrender.com/:splat"
+  status = 200
+  force = true
+
+# 2) Single-page-app fallback: any other path serves index.html so deep links and refresh work.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
