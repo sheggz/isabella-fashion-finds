@@ -1,10 +1,12 @@
 import { deleteProduct, listAdminProducts } from '../../api/admin.js';
 import { getCatalogueOptions } from '../../api/catalogue.js';
 import { el, link } from '../../components/dom.js';
+import { keepFresh } from '../../live.js';
 import { emptyState, errorState, loading } from '../../components/states.js';
 import { formatNaira, stockSummary } from '@isabella/core';
 
 export const renderAdminList = (view) => {
+  let shown = null; // last data drawn, so a background refresh only redraws on change
   const heading = el(
     'div',
     { className: 'page-head' },
@@ -51,20 +53,32 @@ export const renderAdminList = (view) => {
       ),
     );
 
+  const draw = ([products, options]) => {
+    shown = JSON.stringify([products, options]);
+    view.replaceChildren(
+      heading,
+      notice,
+      products.length ? table(products, options) : emptyState('No pieces yet', 'Add your first piece to start selling.'),
+    );
+  };
+
+  // The size list only improves the stock labels, so its failure must not block the page.
+  const fetchAll = () => Promise.all([listAdminProducts(), getCatalogueOptions().catch(() => null)]);
+
   async function load() {
     view.replaceChildren(heading, loading());
     try {
-      // The size list only improves the stock labels, so its failure must not block the page.
-      const [products, options] = await Promise.all([listAdminProducts(), getCatalogueOptions().catch(() => null)]);
-      view.replaceChildren(
-        heading,
-        notice,
-        products.length ? table(products, options) : emptyState('No pieces yet', 'Add your first piece to start selling.'),
-      );
+      draw(await fetchAll());
     } catch (error) {
       view.replaceChildren(heading, errorState(error, load));
     }
   }
 
+  const refresh = async () => {
+    const data = await fetchAll();
+    if (JSON.stringify(data) !== shown) draw(data);
+  };
+
   load();
+  return keepFresh(refresh);
 };

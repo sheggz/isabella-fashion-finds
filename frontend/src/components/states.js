@@ -1,8 +1,22 @@
 // The three states every screen that loads data must handle: loading, empty, error.
 import { el } from './dom.js';
 
-export const loading = (message = 'Loading…') =>
-  el('p', { className: 'state', textContent: message, dataset: { loading: '' } });
+/** After this long a loading placeholder admits the server may be waking from sleep. */
+export const WAKING_AFTER_MS = 5000;
+
+/**
+ * Free hosting puts the server to sleep when idle, and the first request can then take about a
+ * minute. A bare "Loading…" for that long looks broken, so the placeholder explains itself.
+ * The timer only edits the node if it is still on screen (`isConnected`): a page that has been
+ * replaced meanwhile must not be touched.
+ */
+export const loading = (message = 'Loading…') => {
+  const node = el('p', { className: 'state', textContent: message, dataset: { loading: '' } });
+  setTimeout(() => {
+    if (node.isConnected) node.textContent = 'Waking the server up. This can take up to a minute the first time…';
+  }, WAKING_AFTER_MS);
+  return node;
+};
 
 export const emptyState = (title, hint) =>
   el('div', { className: 'state' }, el('p', { className: 'state-title', textContent: title }), hint && el('p', { textContent: hint }));

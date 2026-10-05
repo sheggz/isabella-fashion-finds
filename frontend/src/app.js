@@ -8,7 +8,8 @@ import { renderHome } from './pages/home.js';
 import { renderOrders } from './pages/orders.js';
 import { renderProduct } from './pages/product.js';
 import { createRouter } from './router.js';
-import { cart, loadCart, resetCart } from './state/cart.js';
+import { keepFresh } from './live.js';
+import { cart, loadCart, refreshCart, resetCart } from './state/cart.js';
 import { loadSession, session, signOut } from './state/session.js';
 
 // Pages are added here as milestones land. `requires` makes the router keep a page closed
@@ -45,6 +46,11 @@ export const startApp = async ({ header, main }) => {
     else resetCart();
     drawHeader(state);
     router.refresh(); // access rules may have changed (signed in or out)
+  });
+
+  // Keep the cart in step with other devices (the phone app). Only while signed in.
+  keepFresh(async () => {
+    if (session.get().user) await refreshCart();
   });
 
   // Find out who is signed in BEFORE the first page renders, so an owner-only page is not

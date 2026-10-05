@@ -17,6 +17,13 @@ export const loadCart = async () => {
   }
 };
 
+/** Background sync: fetch quietly and replace the state ONLY if the server's cart differs
+ *  (so an unchanged cart causes no redraw). Errors propagate to the poller, which just retries. */
+export const refreshCart = async () => {
+  const data = await getCart();
+  if (JSON.stringify(data) !== JSON.stringify(cart.get().data)) cart.set({ status: 'ready', data, error: null });
+};
+
 // A refused change (out of stock, over the limit...) throws the normalised error for the caller
 // to show, and leaves the stored cart exactly as it was.
 const adopt = (data) => {

@@ -10,7 +10,7 @@ vi.mock('../src/api/cart.js', () => ({
 }));
 
 import * as api from '../src/api/cart.js';
-import { addItem, cart, changeQuantity, emptyCart, loadCart, removeLine, resetCart } from '../src/state/cart.js';
+import { addItem, cart, changeQuantity, emptyCart, loadCart, refreshCart, removeLine, resetCart } from '../src/state/cart.js';
 
 const data = (n) => ({ lines: [], item_count: n, subtotal_kobo: 0, savings_kobo: 0, has_problems: false });
 
@@ -81,5 +81,17 @@ describe('cart state', () => {
     await loadCart();
     resetCart();
     expect(cart.get()).toEqual({ status: 'idle', data: null, error: null });
+  });
+});
+
+describe('refreshCart (background sync)', () => {
+  it('adopts a cart changed on another device and leaves state untouched when nothing changed', async () => {
+    api.getCart.mockResolvedValueOnce(data(1));
+    await refreshCart();
+    expect(cart.get().data.item_count).toBe(1);
+    const before = cart.get();
+    api.getCart.mockResolvedValueOnce(data(1));
+    await refreshCart();
+    expect(cart.get()).toBe(before); // identical data: no new state object, so nothing redraws
   });
 });

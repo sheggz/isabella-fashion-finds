@@ -130,3 +130,26 @@ describe('home page prices', () => {
     expect(view.querySelector('a.card').textContent).toContain('Sold out');
   });
 });
+
+describe('live refresh on the home page', () => {
+  it('shows a piece the owner added elsewhere, without a reload, and stops when the page is left', async () => {
+    vi.useFakeTimers();
+    try {
+      listProducts.mockResolvedValue([product()]);
+      const stop = renderHome(view);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(view.querySelectorAll('.card')).toHaveLength(1);
+
+      listProducts.mockResolvedValue([product(), product({ id: 'p2', name: 'Lace Top' })]);
+      await vi.advanceTimersByTimeAsync(15100);
+      expect(view.querySelectorAll('.card')).toHaveLength(2);
+
+      stop();
+      listProducts.mockClear();
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(listProducts).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
