@@ -166,3 +166,53 @@ a.button { text-decoration: none; display: inline-block; text-align: center; }
 .badge.order-paid { background: var(--success); color: var(--accent-text); }
 .badge.order-pending { background: var(--warning); color: var(--accent-text); }
 .badge.order-failed, .badge.order-cancelled { background: var(--muted); color: var(--bg); }
+
+/* ===== site shell: announcement strip, header, footer ===== */
+.topbar { background: var(--topbar-bg); color: var(--topbar-text); text-align: center; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; padding: 6px var(--gutter); }
+.bar { gap: 16px; }
+.brand { font-family: var(--font-heading); letter-spacing: 0.02em; }
+.main-nav { display: flex; gap: 24px; }
+.main-nav a { color: var(--text); text-decoration: none; font-weight: 500; }
+.main-nav a:hover { color: var(--accent); }
+.menu-toggle { display: none; border-radius: var(--radius); }
+@media (min-width: 801px) {
+  .bar { flex-wrap: nowrap; }
+  .main-nav { margin-right: auto; margin-left: 24px; }
+}
+@media (max-width: 800px) {
+  .menu-toggle { display: inline-block; }
+  .bar { display: grid; grid-template-columns: auto 1fr; }
+  .brand { text-align: right; }
+  .main-nav, .account { display: none; grid-column: 1 / -1; flex-direction: column; gap: 10px; }
+  .bar.menu-open .main-nav, .bar.menu-open .account { display: flex; align-items: flex-start; }
+}
+button, .button { border-radius: var(--radius); }
+a.sign-in { border-radius: var(--radius); }
+
+#site-footer { background: var(--footer-bg); color: var(--footer-text); margin-top: 48px; padding: 40px var(--gutter) 24px; }
+.footer-inner { max-width: 1100px; margin: 0 auto; display: grid; gap: 28px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.footer-name { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; margin: 0; }
+.footer-column h2 { font-size: 0.95rem; margin-bottom: 10px; }
+.footer-column ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.footer-column a { color: var(--footer-text); text-decoration: none; opacity: 0.85; }
+.footer-column a:hover { opacity: 1; text-decoration: underline; }
+.footer-legal { max-width: 1100px; margin: 28px auto 0; font-size: 0.8rem; opacity: 0.7; border-top: 1px solid color-mix(in srgb, var(--footer-text) 25%, transparent); padding-top: 14px; }
+
+/* ===== landing page ===== */
+main:has(> .view > .hero) { max-width: none; padding: 0 0 64px; }
+.view > .hero ~ section { max-width: 1100px; margin-left: auto; margin-right: auto; padding: 40px var(--gutter) 0; }
+.hero { min-height: 62vh; display: grid; align-items: center; background: linear-gradient(120deg, var(--accent), color-mix(in srgb, var(--accent) 45%, var(--bg))) center / cover; color: var(--on-image); position: relative; }
+.hero::before { content: ''; position: absolute; inset: 0; background: var(--hero-overlay); }
+.hero-text { position: relative; max-width: 1100px; width: 100%; margin: 0 auto; padding: 48px var(--gutter); }
+.hero h1 { font-size: clamp(2rem, 5vw, 3.4rem); max-width: 18ch; }
+.hero p { max-width: 46ch; font-size: 1.1rem; }
+.hero .button.primary { background: var(--surface); color: var(--text); border-color: var(--surface); margin-top: 8px; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.tiles { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.tile { display: grid; align-items: end; min-height: 220px; padding: 16px; text-decoration: none; font-weight: 600; color: var(--on-image); border-radius: var(--radius); background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 70%, var(--bg)), var(--accent)); }
+.tile:hover { filter: brightness(1.08); }
+.banner { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-top: 40px; padding: 48px var(--gutter); }
+.view > .banner { margin-left: var(--gutter); margin-right: var(--gutter); }
+.banner p { max-width: 60ch; margin: 0 auto 16px; color: var(--muted); }
+.info-page { max-width: 760px; }
+.info-page section { margin-top: 24px; }

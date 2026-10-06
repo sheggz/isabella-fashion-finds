@@ -1,4 +1,5 @@
 import { BASE_URL } from '../api/client.js';
+import { site } from '../content/site.js';
 import { el, link } from './dom.js';
 
 /**
@@ -25,5 +26,20 @@ export const renderHeader = (host, { status, user }, { onSignOut, cartCount = 0 
     nav.append(el('a', { className: 'sign-in', href: `${BASE_URL}/auth/google/login`, textContent: 'Sign in with Google' }));
   }
 
-  host.replaceChildren(el('div', { className: 'bar' }, link('/', 'Isabella Fashion Finds', 'brand'), nav));
+  const mainNav = el('nav', { className: 'main-nav', attrs: { 'aria-label': 'Main' } }, ...site.nav.map((item) => link(item.to, item.label)));
+  const toggle = el('button', {
+    type: 'button',
+    className: 'menu-toggle',
+    textContent: 'Menu',
+    attrs: { 'aria-expanded': 'false', 'aria-label': 'Open menu' },
+  });
+  const bar = el('div', { className: 'bar' }, toggle, link('/', site.brandName, 'brand'), mainNav, nav);
+  // On small screens the navigation is hidden until the button is pressed (CSS shows it when
+  // `.menu-open` is on the bar). aria-expanded tells screen readers which state it is in.
+  toggle.addEventListener('click', () => {
+    const open = bar.classList.toggle('menu-open');
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+
+  host.replaceChildren(el('div', { className: 'topbar', textContent: site.topbar }), bar);
 };

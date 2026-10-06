@@ -10,10 +10,10 @@ Added 2026-10-06 at the owner's request, **before** the mobile app (Block 5), so
 ## Blocks
 | Block | Content | Status |
 |---|---|---|
-| D1 | Brand tokens in core, web theme glue, fonts, no hard-coded colours | in progress |
-| D2 | Site shell: announcement strip, new header (nav, cart icon), rich footer, mobile menu | next |
-| D3 | Landing page `/` (hero, best sellers from the real catalogue, collection tiles, values banner, newsletter-style CTA) and Shop page `/shop` (grid, later filters) | |
-| D4 | About page and info pages: Shipping & Returns, FAQ, Contact, Privacy, Terms (text from one content file; Privacy and Terms are also required by Google and Paystack) | |
+| D1 | Brand tokens in core, web theme glue, fonts, no hard-coded colours | **Done 2026-10-06** |
+| D2 | Site shell: announcement strip, new header (nav, cart icon), rich footer, mobile menu | **Done 2026-10-06** |
+| D3 | Landing page `/` (hero, best sellers from the real catalogue, collection tiles, values banner, newsletter-style CTA) and Shop page `/shop` (grid, later filters) | **Done 2026-10-06** |
+| D4 | About page and info pages: Shipping & Returns, FAQ, Contact, Privacy, Terms (text from one content file; Privacy and Terms are also required by Google and Paystack) | **Done 2026-10-06** |
 | D5 | Admin restyle with a sidebar layout (Products, Discounts, later Orders, Dashboard) | |
 | D6 | Owner dashboard (backend + UI): stock levels and low-stock list, sales totals by day/week, best sellers, recent orders. Needs paid orders, so full numbers arrive after Paystack (Block 10); stock part works now | |
 
