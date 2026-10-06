@@ -2,8 +2,10 @@
 // The owner edits this file (or asks for changes) to replace the placeholder copy. Plain data,
 // no logic, so editing it cannot break anything except what you can see.
 
+import { brandContent } from '@isabella/core';
+
 export const site = {
-  brandName: 'Isabella Fashion Finds',
+  brandName: brandContent.brandName,
   topbar: 'Free delivery on orders over ₦50,000 (placeholder offer)',
   // Main navigation (header). `to` is an in-app path.
   nav: [
@@ -34,14 +36,9 @@ export const site = {
       ],
     },
   ],
-  // Landing page. `image: null` shows a colour gradient; set a path/URL to use a photo.
-  hero: {
-    title: 'Effortless pieces for every day',
-    subtitle: 'Thoughtfully chosen fashion finds in sizes that fit, at prices that make sense.',
-    cta: 'Shop now',
-    // Stock photo placeholder (picsum.photos); replace with your own photo URL or file.
-    image: 'https://picsum.photos/seed/isabella-hero/1600/900',
-  },
+  // Landing page.
+  // The hero text and photo are shared with the phone app: edit them in packages/core/src/content.js.
+  hero: brandContent.hero,
   // Tiles under "Collection". Until real categories exist they all open the shop.
   tiles: [
     { label: 'Dresses', to: '/shop', image: 'https://picsum.photos/seed/tile-dresses/600/700' },
