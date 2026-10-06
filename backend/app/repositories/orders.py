@@ -22,3 +22,13 @@ def get_for(session: Session, user_id: uuid.UUID, order_id: uuid.UUID) -> Order 
     return session.scalar(
         select(Order).where(Order.id == order_id, Order.user_id == user_id).options(selectinload(Order.items))
     )
+
+
+def list_paid_since(session: Session, since) -> list[Order]:
+    """Paid orders (any shopper) with `paid_at` on or after `since`. For the owner's dashboard."""
+    query = (
+        select(Order)
+        .where(Order.status == "paid", Order.paid_at >= since)
+        .options(selectinload(Order.items))
+    )
+    return list(session.scalars(query))

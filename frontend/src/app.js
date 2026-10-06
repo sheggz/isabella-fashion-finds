@@ -1,6 +1,8 @@
 // Wires the pieces together: session -> header, router -> pages.
 import { loading } from './components/states.js';
 import { renderHeader } from './components/header.js';
+import { adminShell } from './components/adminShell.js';
+import { renderAdminDashboard } from './pages/admin/dashboard.js';
 import { renderAdminDiscounts } from './pages/admin/discounts.js';
 import { renderAdminEdit } from './pages/admin/edit.js';
 import { renderAdminList } from './pages/admin/list.js';
@@ -29,15 +31,16 @@ export const routes = [
   { name: 'product', pattern: '/products/:id', render: renderProduct },
   { name: 'cart', pattern: '/cart', requires: 'user', render: renderCart },
   { name: 'orders', pattern: '/orders', requires: 'user', render: renderOrders },
-  { name: 'admin', pattern: '/admin', requires: 'owner', render: renderAdminList },
-  { name: 'adminDiscounts', pattern: '/admin/discounts', requires: 'owner', render: renderAdminDiscounts },
+  { name: 'admin', pattern: '/admin', requires: 'owner', shell: 'admin', render: renderAdminDashboard },
+  { name: 'adminProducts', pattern: '/admin/products', requires: 'owner', shell: 'admin', render: renderAdminList },
+  { name: 'adminDiscounts', pattern: '/admin/discounts', requires: 'owner', shell: 'admin', render: renderAdminDiscounts },
   // 'new' must come BEFORE ':id', otherwise the router would read "new" as a product id.
-  { name: 'adminNew', pattern: '/admin/products/new', requires: 'owner', render: renderAdminEdit },
-  { name: 'adminEdit', pattern: '/admin/products/:id', requires: 'owner', render: renderAdminEdit },
+  { name: 'adminNew', pattern: '/admin/products/new', requires: 'owner', shell: 'admin', render: renderAdminEdit },
+  { name: 'adminEdit', pattern: '/admin/products/:id', requires: 'owner', shell: 'admin', render: renderAdminEdit },
 ];
 
 export const startApp = async ({ header, main }) => {
-  const router = createRouter({ routes, container: main, getUser: () => session.get().user });
+  const router = createRouter({ routes, container: main, getUser: () => session.get().user, shells: { admin: adminShell } });
 
   const drawHeader = (state) =>
     renderHeader(header, state, {

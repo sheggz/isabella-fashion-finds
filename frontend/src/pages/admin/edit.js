@@ -221,7 +221,7 @@ export const renderAdminEdit = (view, { params, navigate }) => {
   const isNew = productId === null;
 
   const missing = () =>
-    el('div', { className: 'state' }, el('h1', { textContent: 'Piece not found' }), el('p', { textContent: 'This piece could not be found. It may have been deleted.' }), link('/admin', 'Back to your pieces'));
+    el('div', { className: 'state' }, el('h1', { textContent: 'Piece not found' }), el('p', { textContent: 'This piece could not be found. It may have been deleted.' }), link('/admin/products', 'Back to your pieces'));
 
   async function load() {
     view.replaceChildren(loading());
@@ -278,7 +278,7 @@ export const renderAdminEdit = (view, { params, navigate }) => {
     const parts = [
       el('div', { className: 'page-head' },
         el('h1', { textContent: isNew ? 'New piece' : `Edit: ${product.name}` }),
-        link('/admin', '← All pieces')),
+        link('/admin/products', '← All pieces')),
       form,
     ];
 
@@ -292,7 +292,7 @@ export const renderAdminEdit = (view, { params, navigate }) => {
         if (!window.confirm(`Delete "${product.name}"? This also removes its photos and cannot be undone.`)) return;
         try {
           await deleteProduct(productId);
-          navigate('/admin');
+          navigate('/admin/products');
         } catch (error) {
           showAlert(form, error);
         }

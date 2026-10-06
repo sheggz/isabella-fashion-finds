@@ -114,3 +114,15 @@ describe('admin', () => {
     ]);
   });
 });
+
+describe('admin dashboard endpoint', () => {
+  it('asks for the window and the low-stock threshold', async () => {
+    const calls = [];
+    const request = async (path, options) => { calls.push([path, options]); return {}; };
+    const api = createAdminApi(request);
+    await api.getDashboard({ days: 7, lowStock: 5 });
+    await api.getDashboard();
+    expect(calls[0][0]).toBe('/admin/dashboard?days=7&low_stock=5');
+    expect(calls[1][0]).toBe('/admin/dashboard');
+  });
+});

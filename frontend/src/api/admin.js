@@ -3,7 +3,7 @@ import { createAdminApi } from '@isabella/core';
 import { api } from './client.js';
 
 export const {
-  listAdminProducts, getAdminProduct, createProduct, saveProduct, deleteProduct,
+  getDashboard, listAdminProducts, getAdminProduct, createProduct, saveProduct, deleteProduct,
   uploadImage, deleteImage, reorderImages,
   listDiscounts, createDiscount, replaceDiscount, deleteDiscount,
 } = createAdminApi(api);

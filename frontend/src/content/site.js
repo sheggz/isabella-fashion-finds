@@ -4,7 +4,7 @@
 
 export const site = {
   brandName: 'Isabella Fashion Finds',
-  topbar: 'Placeholder: free delivery on orders over ₦50,000',
+  topbar: 'Free delivery on orders over ₦50,000 (placeholder offer)',
   // Main navigation (header). `to` is an in-app path.
   nav: [
     { to: '/shop', label: 'Shop' },
@@ -36,21 +36,22 @@ export const site = {
   ],
   // Landing page. `image: null` shows a colour gradient; set a path/URL to use a photo.
   hero: {
-    title: 'Placeholder: a line that says who you are',
-    subtitle: 'Placeholder: one friendly sentence about the pieces you sell.',
+    title: 'Effortless pieces for every day',
+    subtitle: 'Thoughtfully chosen fashion finds in sizes that fit, at prices that make sense.',
     cta: 'Shop now',
-    image: null,
+    // Stock photo placeholder (picsum.photos); replace with your own photo URL or file.
+    image: 'https://picsum.photos/seed/isabella-hero/1600/900',
   },
   // Tiles under "Collection". Until real categories exist they all open the shop.
   tiles: [
-    { label: 'Dresses', to: '/shop', image: null },
-    { label: 'Tops', to: '/shop', image: null },
-    { label: 'Trousers', to: '/shop', image: null },
-    { label: 'Accessories', to: '/shop', image: null },
+    { label: 'Dresses', to: '/shop', image: 'https://picsum.photos/seed/tile-dresses/600/700' },
+    { label: 'Tops', to: '/shop', image: 'https://picsum.photos/seed/tile-tops/600/700' },
+    { label: 'Trousers', to: '/shop', image: 'https://picsum.photos/seed/tile-trousers/600/700' },
+    { label: 'Accessories', to: '/shop', image: 'https://picsum.photos/seed/tile-accessories/600/700' },
   ],
   banner: {
-    title: 'Placeholder: what makes your pieces special',
-    text: 'Placeholder: two sentences about quality, sourcing or your story.',
+    title: 'Quality you can feel, fits you can trust',
+    text: 'Every piece is checked by hand before it is listed, and every listing shows real measurements so you can order with confidence.',
     cta: 'Read our story',
     to: '/about',
   },
