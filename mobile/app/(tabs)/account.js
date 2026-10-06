@@ -39,6 +39,9 @@ export default function AccountScreen() {
   } else if (status === 'signedIn') {
     body = (
       <View>
+        <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+          <Text style={{ color: colors.accentText, fontSize: 28, fontWeight: '800' }}>{(user.name || user.email || '?').charAt(0).toUpperCase()}</Text>
+        </View>
         <Text style={[text, { fontSize: 22, fontWeight: '700' }]}>{user.name || user.email}</Text>
         {user.name ? <Text style={muted}>{user.email}</Text> : null}
         <Text style={[muted, { marginTop: 4 }]}>{user.role === 'owner' ? 'Store owner' : 'Customer'}</Text>
