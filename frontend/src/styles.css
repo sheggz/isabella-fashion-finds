@@ -1,28 +1,6 @@
-:root {
-  --bg: #faf7f4;
-  --surface: #ffffff;
-  --text: #2a2522;
-  --muted: #6f6660;
-  --accent: #a8503a;
-  --accent-text: #ffffff;
-  --border: #e6dfd8;
-  --danger: #b3261e;
-  --radius: 12px;
-  --gutter: 16px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #171412;
-    --surface: #211d1a;
-    --text: #f1ebe5;
-    --muted: #a99f97;
-    --accent: #e08a6f;
-    --accent-text: #1b1210;
-    --border: #3a332e;
-    --danger: #ff8a80;
-  }
-}
+/* Colours, fonts and corner radius come from the brand kit (packages/core/src/theme.js),
+   injected by src/theme.js. Never write a colour value in this file: use a variable. */
+:root { --gutter: 16px; }
 
 * { box-sizing: border-box; }
 
@@ -30,10 +8,10 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 16px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font: 16px/1.55 var(--font-body);
 }
 
-h1, h2, h3 { line-height: 1.2; margin: 0 0 0.5rem; }
+h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; margin: 0 0 0.5rem; }
 a { color: var(--accent); }
 img { max-width: 100%; display: block; }
 main { max-width: 1100px; margin: 0 auto; padding: 24px var(--gutter) 64px; }
@@ -134,8 +112,8 @@ button.danger { color: var(--danger); border-color: var(--danger); background: t
 .pricing-mode { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; display: grid; gap: 6px; }
 
 /* discounts screen */
-.badge.status-live { background: #1d7a46; color: #fff; }
-.badge.status-scheduled { background: #1b5fa8; color: #fff; }
+.badge.status-live { background: var(--success); color: var(--accent-text); }
+.badge.status-scheduled { background: var(--info); color: var(--accent-text); }
 .badge.status-ended, .badge.status-disabled { background: var(--muted); color: var(--bg); }
 .zone-note { max-width: 640px; }
 .form-title { margin-top: 32px; }
@@ -185,6 +163,6 @@ a.button { text-decoration: none; display: inline-block; text-align: center; }
 .order-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .order-items li { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; }
 .order-items img, .order-items .no-photo { width: 64px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; min-height: 0; }
-.badge.order-paid { background: #1d7a46; color: #fff; }
-.badge.order-pending { background: #b26a00; color: #fff; }
+.badge.order-paid { background: var(--success); color: var(--accent-text); }
+.badge.order-pending { background: var(--warning); color: var(--accent-text); }
 .badge.order-failed, .badge.order-cancelled { background: var(--muted); color: var(--bg); }

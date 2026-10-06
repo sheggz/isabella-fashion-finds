@@ -14,3 +14,4 @@ export * from './api/apiError.js';
 export * from './api/client.js';
 export * from './api/endpoints.js';
 export * from './poller.js';
+export * from './theme.js';
