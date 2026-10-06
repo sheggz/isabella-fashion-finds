@@ -61,3 +61,71 @@ def test_options_also_publish_the_photo_rules(app, client):
 
 def test_options_also_publish_the_cart_ceiling(app, client):
     assert client.get("/catalogue/options").json()["cart"] == {"max_per_line": 10}
+
+
+def _paid_order(app, user_id, total, lines):
+    from datetime import datetime, timezone
+
+    from app.db.session import get_session
+    from app.models.order import Order, OrderItem
+
+    session_gen = app.dependency_overrides[get_session]()
+    s = next(session_gen)
+    now = datetime.now(timezone.utc)
+    order = Order(user_id=user_id, status="paid", subtotal_kobo=total, total_kobo=total, created_at=now, paid_at=now)
+    order.items = [
+        OrderItem(product_name=n, size="M", unit_price_kobo=t // q, base_price_kobo=t // q, quantity=q, line_total_kobo=t)
+        for n, q, t in lines
+    ]
+    s.add(order)
+    s.commit()
+    s.close()
+
+
+def _a_user(app):
+    from app.db.session import get_session
+    from app.models.user import User
+
+    s = next(app.dependency_overrides[get_session]())
+    u = User(google_sub="s1", email="a@example.test", name="Ada")
+    s.add(u)
+    s.commit()
+    uid = u.id
+    s.close()
+    return uid
+
+
+def test_dashboard_reports_stock_and_sales(owner_app, client):
+    client.post("/products", json={"name": "Dress", "price_kobo": 1000, "variants": [{"size": "S", "stock": 2}, {"size": "M", "stock": 9}]})
+    client.post("/products", json={"name": "Gone", "price_kobo": 1000, "variants": [{"size": "S", "stock": 0}]})
+    _paid_order(owner_app, _a_user(owner_app), 5000, [("Dress", 2, 5000)])
+
+    body = client.get("/admin/dashboard?days=7").json()
+
+    assert body["stock"]["units_in_stock"] == 11
+    assert [(r["name"], r["size"]) for r in body["stock"]["low_stock"]] == [("Dress", "S")]
+    assert [r["name"] for r in body["stock"]["sold_out"]] == ["Gone"]
+    assert body["stock"]["low_stock_threshold"] == 3
+    assert body["sales"]["revenue_kobo"] == 5000 and body["sales"]["orders"] == 1
+    assert len(body["sales"]["by_day"]) == 7
+    assert body["sales"]["top_products"][0]["name"] == "Dress"
+
+
+def test_dashboard_ignores_unpaid_orders(owner_app, client):
+    from app.db.session import get_session
+    from app.models.order import Order
+
+    s = next(owner_app.dependency_overrides[get_session]())
+    s.add(Order(user_id=_a_user(owner_app), status="pending", subtotal_kobo=900, total_kobo=900))
+    s.commit()
+    assert client.get("/admin/dashboard").json()["sales"]["revenue_kobo"] == 0
+
+
+def test_dashboard_rejects_silly_parameters(owner_app, client):
+    assert client.get("/admin/dashboard?days=0").status_code == 422
+    assert client.get("/admin/dashboard?days=500").status_code == 422
+
+
+def test_dashboard_is_owner_only(app, client):
+    # no override of require_owner: an anonymous caller must be refused
+    assert client.get("/admin/dashboard").status_code in (401, 403)

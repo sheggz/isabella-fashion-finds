@@ -137,3 +137,45 @@ describe('router', () => {
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('router shells (a frame around a group of pages)', () => {
+  const shellRoutes = [
+    { name: 'dash', pattern: '/admin', requires: 'owner', shell: 'admin', render: (view) => { view.textContent = 'DASH'; } },
+    { name: 'plain', pattern: '/', render: (view) => { view.textContent = 'PLAIN'; } },
+  ];
+  const shells = {
+    admin: (active) => {
+      const content = document.createElement('div');
+      content.className = 'content';
+      const root = document.createElement('div');
+      root.className = 'frame';
+      root.dataset.active = active;
+      root.append(content);
+      return { root, content };
+    },
+  };
+
+  it('renders the page inside the shell and tells the shell which page is active', () => {
+    user = { role: 'owner' };
+    window.history.replaceState({}, '', '/admin');
+    router = createRouter({ routes: shellRoutes, container, getUser: () => user, shells });
+    router.start();
+    expect(container.querySelector('.frame[data-active="dash"] .content').textContent).toBe('DASH');
+  });
+
+  it('does not use a shell for routes without one', () => {
+    router = createRouter({ routes: shellRoutes, container, getUser: () => user, shells });
+    router.start();
+    expect(container.querySelector('.frame')).toBeNull();
+    expect(container.textContent).toBe('PLAIN');
+  });
+
+  it('keeps the access check: a non-owner never gets the admin shell', () => {
+    user = { role: 'customer' };
+    window.history.replaceState({}, '', '/admin');
+    router = createRouter({ routes: shellRoutes, container, getUser: () => user, shells });
+    router.start();
+    expect(container.querySelector('.frame')).toBeNull();
+    expect(container.textContent).toContain('Store owner only');
+  });
+});

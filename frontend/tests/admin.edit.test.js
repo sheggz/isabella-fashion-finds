@@ -209,7 +209,7 @@ describe('edit piece', () => {
 
     view.querySelector('button[data-delete-piece]').click();
     await vi.waitFor(() => expect(admin.deleteProduct).toHaveBeenCalledWith('p1'));
-    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/admin'));
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/admin/products'));
   });
 
   it('shows a not-found message for a piece that does not exist', async () => {

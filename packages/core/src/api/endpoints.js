@@ -35,6 +35,15 @@ export const createOrdersApi = (request) => ({
 
 /** Owner-only endpoints. The server enforces the owner role; these are just the calls. */
 export const createAdminApi = (request) => ({
+  /** Stock levels and sales. `days` = sales window (1-90), `lowStock` = alert threshold. */
+  getDashboard: ({ days, lowStock } = {}) => {
+    const query = new URLSearchParams();
+    if (days !== undefined) query.set('days', String(days));
+    if (lowStock !== undefined) query.set('low_stock', String(lowStock));
+    const text = query.toString();
+    return request(`/admin/dashboard${text ? `?${text}` : ''}`);
+  },
+
   // pieces
   listAdminProducts: () => request('/admin/products'),
   getAdminProduct: (productId) => request(`/admin/products/${enc(productId)}`),

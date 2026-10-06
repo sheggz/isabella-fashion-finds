@@ -6,30 +6,30 @@ export const pages = {
   about: {
     title: 'Our story',
     sections: [
-      { heading: 'Who we are', body: ['Placeholder: a few sentences about Isabella Fashion Finds, who runs it and why it exists.'] },
-      { heading: 'What we believe', body: ['Placeholder: the values behind the pieces you choose (quality, fit, fair prices).'] },
-      { heading: 'How we choose our pieces', body: ['Placeholder: where the pieces come from and how each one is checked before it is listed.'] },
+      { heading: 'Who we are', body: ['Isabella Fashion Finds began with a simple idea: good clothes should be easy to find and easy to fit. We pick pieces we would wear ourselves and describe them honestly. (Filler text: replace with your own story.)'] },
+      { heading: 'What we believe', body: ['Quality over quantity, accurate measurements, and fair prices. We would rather sell fewer pieces that customers love than many that come back.'] },
+      { heading: 'How we choose our pieces', body: ['Each piece is inspected, measured and photographed before it goes on the shop. If something is not right, it does not get listed.'] },
     ],
   },
   'shipping-returns': {
     title: 'Shipping & returns',
     sections: [
-      { heading: 'Delivery', body: ['Placeholder: delivery areas, how long it takes and what it costs.'] },
-      { heading: 'Returns and exchanges', body: ['Placeholder: how many days customers have, the condition pieces must be in and how to start a return.'] },
+      { heading: 'Delivery', body: ['We deliver across Nigeria. Orders are packed within two working days; delivery usually takes three to seven working days depending on your location. (Filler text: confirm the real terms.)'] },
+      { heading: 'Returns and exchanges', body: ['If a piece does not fit, contact us within seven days of delivery. Items must be unworn with the tags attached. (Filler text: confirm the real terms.)'] },
     ],
   },
   faq: {
     title: 'Frequently asked questions',
     sections: [
       { heading: 'How do I find my size?', body: ['Each piece lists its measurements on its page. Compare them with a garment that fits you well.'] },
-      { heading: 'Can I change my order after paying?', body: ['Placeholder: explain the rule here.'] },
-      { heading: 'How do I pay?', body: ['Placeholder: payment methods will be described when online payment is switched on.'] },
+      { heading: 'Can I change my order after paying?', body: ['Contact us as soon as possible. If your order has not been packed yet we will gladly change it.'] },
+      { heading: 'How do I pay?', body: ['Online payment by card and bank transfer will be available soon.'] },
     ],
   },
   contact: {
     title: 'Contact us',
     sections: [
-      { heading: 'Get in touch', body: ['Placeholder: the shop email address, phone or WhatsApp number and opening hours.'] },
+      { heading: 'Get in touch', body: ['Email, phone and WhatsApp details will appear here. We reply within one working day. (Filler text: add the real contact details.)'] },
     ],
   },
   privacy: {

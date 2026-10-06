@@ -37,9 +37,10 @@ const forbiddenPage = (view, user) => {
 /**
  * @param {{routes: {name: string, pattern: string, requires?: string,
  *   render: (view: HTMLElement, ctx: object) => void | (() => void) | Promise<void | (() => void)>}[],
- *   container: HTMLElement, getUser: () => object | null}} options
+ *   container: HTMLElement, getUser: () => object | null,
+ *   shells?: Record<string, (activeRouteName: string) => {root: HTMLElement, content: HTMLElement}>}} options
  */
-export const createRouter = ({ routes, container, getUser }) => {
+export const createRouter = ({ routes, container, getUser, shells = {} }) => {
   let cleanup = null;
   let renderId = 0;
 
@@ -66,7 +67,15 @@ export const createRouter = ({ routes, container, getUser }) => {
     const user = getUser();
     if (!allowed(route.requires, user)) return route.requires === 'user' ? signInPage(view) : forbiddenPage(view, user);
 
-    const result = route.render(view, { params: match.params, navigate });
+    // A route may ask for a "shell": a frame (e.g. the owner's sidebar) built once per navigation
+    // that the page renders INTO. Placed after the access check, so a visitor never sees the frame.
+    let target = view;
+    if (route.shell && shells[route.shell]) {
+      const shell = shells[route.shell](route.name);
+      view.replaceChildren(shell.root);
+      target = shell.content;
+    }
+    const result = route.render(target, { params: match.params, navigate });
     // A page may return its cleanup function directly, or a promise that resolves to one.
     // A direct function must be registered immediately: waiting even one microtask would let a
     // fast navigation away skip it. A promised one is registered when it arrives, unless the

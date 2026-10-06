@@ -90,6 +90,26 @@ const PRODUCTS = [
   },
 ];
 
+// Filler pieces so the landing page and shop look full while previewing. Generated, not hand
+// written: names, prices and photos come from small lists, so adding more is changing a number.
+const FILLER_NAMES = ['Linen Wrap Top', 'Tailored Trousers', 'Silk Slip Dress', 'Cotton Shirt Dress', 'Pleated Midi Skirt', 'Cropped Blazer', 'Knit Cardigan', 'Satin Camisole'];
+const fillerPiece = (name, index) => ({
+  id: `mock-f${index + 1}`,
+  name,
+  description: 'Soft, easy to style and made to last. (Filler text for previewing.)',
+  pricing_mode: 'single',
+  price_kobo: (800 + index * 175) * 1000,
+  price_varies: false,
+  sale_price_kobo: null,
+  discount: null,
+  max_per_order: null,
+  is_active: true,
+  created_at: `2026-09-${String(10 + index).padStart(2, '0')}T10:00:00Z`,
+  variants: ['S', 'M', 'L'].map((size, n) => ({ id: `mock-fv${index}-${n}`, size, stock: 1 + ((index + n) % 4), price_kobo: (800 + index * 175) * 1000, sale_price_kobo: null, measurements: {} })),
+  images: [{ id: `mock-fi${index + 1}`, position: 0, url: photo(`filler-${index + 1}`) }],
+});
+PRODUCTS.push(...FILLER_NAMES.map(fillerPiece));
+
 /** Pretend the network takes a moment, so loading states are actually visible. */
 const later = (value, ms = 400) => new Promise((resolve) => setTimeout(() => resolve(value), ms));
 

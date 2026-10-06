@@ -25,7 +25,15 @@ const tiles = () =>
     'section',
     { className: 'collection' },
     el('h2', { textContent: 'Collection' }),
-    el('div', { className: 'tiles' }, ...site.tiles.map((t) => link(t.to, t.label, 'tile'))),
+    el(
+      'div',
+      { className: 'tiles' },
+      ...site.tiles.map((t) => {
+        const tile = link(t.to, t.label, 'tile');
+        if (t.image) tile.style.backgroundImage = `linear-gradient(to top, var(--hero-overlay), transparent 60%), url("${t.image}")`;
+        return tile;
+      }),
+    ),
   );
 
 const banner = () =>
