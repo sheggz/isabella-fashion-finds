@@ -91,3 +91,33 @@ describe('header: cart and orders', () => {
     expect(host.querySelector('a[href="/admin"]')).not.toBeNull();
   });
 });
+
+
+describe('header: site shell', () => {
+  const signedOut = { status: 'ready', user: null };
+
+  it('shows the announcement strip above the bar', () => {
+    renderHeader(host, signedOut, {});
+    expect(host.querySelector('.topbar').textContent).not.toBe('');
+  });
+
+  it('links the main navigation to the shop and the about page', () => {
+    renderHeader(host, signedOut, {});
+    const nav = host.querySelector('nav.main-nav');
+    expect(nav.querySelector('a[href="/shop"]')).not.toBeNull();
+    expect(nav.querySelector('a[href="/about"]')).not.toBeNull();
+  });
+
+  it('has a menu button that opens and closes the navigation on small screens', () => {
+    renderHeader(host, signedOut, {});
+    const toggle = host.querySelector('button.menu-toggle');
+    const bar = host.querySelector('.bar');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(bar.classList.contains('menu-open')).toBe(true);
+    toggle.click();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(bar.classList.contains('menu-open')).toBe(false);
+  });
+});

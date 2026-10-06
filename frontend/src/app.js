@@ -6,7 +6,9 @@ import { renderAdminEdit } from './pages/admin/edit.js';
 import { renderAdminList } from './pages/admin/list.js';
 import { renderCart } from './pages/cart.js';
 import { renderHome } from './pages/home.js';
+import { renderInfoPage } from './pages/info.js';
 import { renderOrders } from './pages/orders.js';
+import { renderShop } from './pages/shop.js';
 import { renderProduct } from './pages/product.js';
 import { createRouter } from './router.js';
 import { keepFresh } from './live.js';
@@ -17,6 +19,13 @@ import { loadSession, session, signOut } from './state/session.js';
 // to anyone without the right role (the server still enforces it too; this is only UX).
 export const routes = [
   { name: 'home', pattern: '/', render: renderHome },
+  { name: 'shop', pattern: '/shop', render: renderShop },
+  { name: 'about', pattern: '/about', render: renderInfoPage('about') },
+  { name: 'shipping', pattern: '/shipping-returns', render: renderInfoPage('shipping-returns') },
+  { name: 'faq', pattern: '/faq', render: renderInfoPage('faq') },
+  { name: 'contact', pattern: '/contact', render: renderInfoPage('contact') },
+  { name: 'privacy', pattern: '/privacy', render: renderInfoPage('privacy') },
+  { name: 'terms', pattern: '/terms', render: renderInfoPage('terms') },
   { name: 'product', pattern: '/products/:id', render: renderProduct },
   { name: 'cart', pattern: '/cart', requires: 'user', render: renderCart },
   { name: 'orders', pattern: '/orders', requires: 'user', render: renderOrders },
