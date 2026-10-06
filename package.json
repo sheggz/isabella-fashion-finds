@@ -4,10 +4,15 @@
   "description": "Monorepo: backend (Python), frontend (web), packages/core (shared logic), mobile (added later)",
   "workspaces": [
     "frontend",
-    "packages/*"
+    "packages/*",
+    "mobile"
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
     "build": "npm run build -w frontend"
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-test-renderer": "19.2.3"
   }
 }
