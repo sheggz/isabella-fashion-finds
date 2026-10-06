@@ -1,4 +1,5 @@
 // Wires the pieces together: session -> header, router -> pages.
+import { loading } from './components/states.js';
 import { renderHeader } from './components/header.js';
 import { renderAdminDiscounts } from './pages/admin/discounts.js';
 import { renderAdminEdit } from './pages/admin/edit.js';
@@ -50,11 +51,16 @@ export const startApp = async ({ header, main }) => {
 
   // Keep the cart in step with other devices (the phone app). Only while signed in.
   keepFresh(async () => {
-    if (session.get().user) await refreshCart();
+    // If the first check failed because the server was asleep, keep trying to find out who is
+    // signed in (an `error` on the session means "unknown", not "signed out").
+    if (session.get().error) await loadSession({ attempts: 1 });
+    else if (session.get().user) await refreshCart();
   });
 
   // Find out who is signed in BEFORE the first page renders, so an owner-only page is not
   // wrongly shown as "forbidden" for a moment on a hard refresh.
+  // The first request after idle can take a minute (free hosting wakes up): say so, don't show a blank page.
+  main.replaceChildren(loading());
   await loadSession();
   router.start();
   return router;
