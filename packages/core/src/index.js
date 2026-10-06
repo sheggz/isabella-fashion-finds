@@ -16,3 +16,4 @@ export * from './api/endpoints.js';
 export * from './poller.js';
 export * from './theme.js';
 export * from './lib/dashboard.js';
+export * from './mobileAuth.js';

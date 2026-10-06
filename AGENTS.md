@@ -9,7 +9,8 @@ Online store for a fashion brand. The owner manages a catalogue; customers sign 
 - **Persistence/storage:** Supabase as managed Postgres + Storage. Data API and Supabase Auth are NOT used. FastAPI reaches Postgres directly via SQLAlchemy 2.x (psycopg) with Alembic migrations (`backend/alembic/`); every table enables RLS with no policies. The service key stays server-side and is only for Storage.
 - **Auth:** FastAPI handles Google OAuth itself; session is a signed httpOnly cookie. Roles: `customer`, `owner` (bootstrapped from `OWNER_EMAILS`).
 - **Payments:** Flutterwave (NGN only). **Email:** Mailgun.
-- Monorepo: backend, frontend, packages/core, (mobile), docs, and DB migrations live together.
+- **Mobile app:** `mobile/` (Expo SDK 57, React Native, JavaScript, Expo Router); see `mobile/AGENTS.md`. Needs Node 22.13+.
+- Monorepo: backend, frontend, packages/core, mobile, docs, and DB migrations live together.
 
 ## Coding rules
 1. **Pure functions first.** Business logic (pricing, discounts, order totals, stock checks) must be pure: same input gives the same output, no I/O, no clock or randomness read inside (pass `now`, ids in as arguments), no mutation of arguments.

@@ -17,6 +17,9 @@ export const createCatalogueApi = (request) => ({
 export const createAuthApi = (request) => ({
   getMe: () => request('/auth/me'),
   logout: () => request('/auth/logout', { method: 'POST' }),
+  /** Phone only: trade the one-time code from the sign-in link (plus the PKCE secret) for a token. */
+  exchangeMobileCode: (code, codeVerifier) =>
+    request('/auth/mobile/exchange', { method: 'POST', json: { code, code_verifier: codeVerifier } }),
 });
 
 /** The signed-in shopper's cart. Every call answers with the whole updated cart. */
