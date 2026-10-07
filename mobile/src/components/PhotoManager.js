@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { remainingSlots, sortedImages, validateImageFile } from '@isabella/core';
 import { admin } from '../api/client';
-import { photoFromAsset } from '../lib/photo';
+import { shrinkPhoto } from '../lib/shrink';
 import { useTheme } from '../theme';
 import { Badge, Button, Photo } from './ui';
 import { Section } from './forms';
@@ -27,7 +27,9 @@ export function PhotoManager({ product, rules, onChange }) {
     try {
       onChange(await action());
     } catch (error) {
-      setMessage(error?.message ?? fallback);
+      // A network failure carries the platform's reason: show it small so problems can be diagnosed.
+      const reason = error?.details?.reason;
+      setMessage(`${error?.message ?? fallback}${reason ? ` (${reason})` : ''}`);
     } finally {
       setBusy(false);
     }
@@ -35,7 +37,14 @@ export function PhotoManager({ product, rules, onChange }) {
 
   const upload = async (result) => {
     if (result.canceled || !result.assets?.length) return;
-    const file = photoFromAsset(result.assets[0]);
+    setBusy(true);
+    setMessage('');
+    let file;
+    try {
+      file = await shrinkPhoto(result.assets[0]); // smaller and always JPEG: faster and accepted
+    } finally {
+      setBusy(false);
+    }
     const problem = validateImageFile(file, rules);
     if (problem) { setMessage(problem); return; }
     await run(() => admin.uploadImage(product.id, file), 'Could not upload the photo.');
