@@ -11,6 +11,7 @@ jest.mock('expo-image-picker', () => ({
   launchCameraAsync: jest.fn(),
   requestCameraPermissionsAsync: jest.fn(),
 }));
+jest.mock('../src/lib/shrink', () => ({ shrinkPhoto: jest.fn(async () => ({ uri: 'file:///shrunk.jpg', name: 'photo.jpg', type: 'image/jpeg', size: undefined })) }));
 jest.mock('../src/api/client', () => ({
   getCatalogueOptions: jest.fn(),
   admin: {
@@ -129,23 +130,23 @@ describe('existing piece', () => {
     await waitFor(() => expect(screen.getByText('Piece not found')).toBeTruthy());
   });
 
-  it('uploads a photo chosen from the library', async () => {
-    ImagePicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///x/new.jpg', mimeType: 'image/jpeg', fileName: 'new.jpg', fileSize: 1000 }] });
+  it('shrinks the chosen photo, then uploads it as a JPEG', async () => {
+    ImagePicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///x/new.heic', width: 4000, height: 3000 }] });
     admin.uploadImage.mockResolvedValue(product({ images: [...product().images, { id: 'i3', position: 2, url: 'https://cdn.test/3.png' }] }));
     await render(<ProductEditScreen />);
     await waitFor(() => expect(screen.getByText('Choose photo')).toBeTruthy());
     await fireEvent.press(screen.getByText('Choose photo'));
-    await waitFor(() => expect(admin.uploadImage).toHaveBeenCalledWith('p1', { uri: 'file:///x/new.jpg', name: 'new.jpg', type: 'image/jpeg', size: 1000 }));
+    await waitFor(() => expect(admin.uploadImage).toHaveBeenCalledWith('p1', { uri: 'file:///shrunk.jpg', name: 'photo.jpg', type: 'image/jpeg', size: undefined }));
     await waitFor(() => expect(screen.getByText('3 of 3 photos. Delete one to add another.')).toBeTruthy());
   });
 
-  it('refuses an unsupported photo before uploading it', async () => {
-    ImagePicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///x/pic.heic', mimeType: 'image/heic', fileSize: 1000 }] });
+  it('shows the reason when the upload cannot reach the server', async () => {
+    ImagePicker.launchImageLibraryAsync.mockResolvedValue({ canceled: false, assets: [{ uri: 'file:///x/a.jpg', width: 800, height: 600 }] });
+    admin.uploadImage.mockRejectedValue({ status: 0, code: 'network_error', message: 'Cannot reach the server.', details: { reason: 'Network request failed' } });
     await render(<ProductEditScreen />);
     await waitFor(() => expect(screen.getByText('Choose photo')).toBeTruthy());
     await fireEvent.press(screen.getByText('Choose photo'));
-    await waitFor(() => expect(screen.getByText('Use a JPEG, PNG or WebP photo.')).toBeTruthy());
-    expect(admin.uploadImage).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText('Cannot reach the server. (Network request failed)')).toBeTruthy());
   });
 
   it('does nothing when the picker is cancelled', async () => {

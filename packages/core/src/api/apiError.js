@@ -19,10 +19,14 @@ export const parseApiError = (status, body) => {
   return { status, code, message, details, requestId };
 };
 
-export const networkError = () => ({
+/**
+ * `cause` is whatever the platform threw (e.g. "Network request failed"). Its text is kept in
+ * `details.reason` so a screen can show WHY when needed, without changing the friendly message.
+ */
+export const networkError = (cause) => ({
   status: 0,
   code: 'network_error',
   message: 'Cannot reach the server. Check your connection and try again.',
-  details: null,
+  details: cause?.message ? { reason: String(cause.message) } : null,
   requestId: null,
 });

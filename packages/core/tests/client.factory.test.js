@@ -99,6 +99,11 @@ describe('createApiClient: reading the answer', () => {
     await expect(make(f)('/x')).rejects.toMatchObject({ status: 0, code: 'network_error' });
   });
 
+  it('keeps the platform’s reason for a network failure in details', async () => {
+    const f = vi.fn().mockRejectedValue(new TypeError('Network request failed'));
+    await expect(make(f)('/x')).rejects.toMatchObject({ code: 'network_error', details: { reason: 'Network request failed' } });
+  });
+
   it('a failing token lookup is reported as an error and never sends an unauthenticated request', async () => {
     const f = reply(200, {});
     const client = make(f, { getAuthHeader: async () => { throw new Error('storage locked'); } });

@@ -164,7 +164,7 @@ Each block lists what is built, the tests first, what I need from you, and its w
 - Walk-through `08-live-sync.md` (a short manual checklist you can run with web and phone side by side).
 
 ### Block 9: installing it properly, hardening, wrap-up
-- **Android:** a real installable APK through Expo's free build service (needs the Expo account).
+- **Android APK: PENDED by the owner (2026-10-07).** Expo Go is the test path for now; the APK build can be done later with Expo's free cloud build.
 - **iPhone:** explain the options honestly: keep using Expo Go (free), or pay Apple's $99/year for TestFlight / your own signed build. No Mac is needed either way for the Expo cloud build, but the paid account is mandatory for a standalone iPhone install.
 - Hardening: remove the `exp://` allowance when standalone builds are used, rate limiting on `/auth/*`, token revocation list, review of logs and secrets, backup/restore note for Supabase.
 - Update ADRs, README, `pending.md`; final write-up.

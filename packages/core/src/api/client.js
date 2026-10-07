@@ -45,8 +45,8 @@ export const createApiClient = ({ baseUrl, credentials, getAuthHeader, fetchImpl
     let res;
     try {
       res = await send(`${root}${path}`, init);
-    } catch {
-      throw networkError(); // no response at all: offline, DNS, CORS, server down
+    } catch (cause) {
+      throw networkError(cause); // no response at all: offline, DNS, CORS, server down
     }
 
     let parsed = null;
